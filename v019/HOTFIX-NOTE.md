@@ -1,0 +1,1 @@
+Hotfix 0.1.9: brouillard de guerre géoréférencé et correction des actions non cliquables. La source originale est conservée séparément pour permettre un retour arrière.
