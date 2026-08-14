@@ -4,20 +4,13 @@
 const E=window.AbsenceEngine;
 if(!E)return;
 
-// Object actions for carried items belong exclusively to the object popup.
+// Actions concerning an object already carried belong exclusively to its popup.
 const originalContextActions=E.getContextActions?.bind(E);
 if(originalContextActions){
   E.getContextActions=(state)=>originalContextActions(state).filter(a=>a.id!=='refill_bottle');
 }
 
-const TOP_ICONS={
-  health:'❤️',
-  hunger:'🍽️',
-  thirst:'💧',
-  fatigue:'💤',
-  stress:'🧠',
-  pain:'🩹'
-};
+const TOP_ICONS={health:'❤️',hunger:'🍽️',thirst:'💧',fatigue:'💤',stress:'🧠',pain:'🩹'};
 const TOP_INFO={
   health:['Santé','Points de vie du personnage. À 0 PV, la partie est terminée.'],
   hunger:['Faim','Augmente avec le temps. Une faim trop élevée finit par affecter la santé.'],
@@ -31,10 +24,7 @@ const BOTTOM_ICONS={home:'🏠',map:'🗺️',inventory:'🎒',world:'🌍'};
 let statBubble=null;
 let applying=false;
 
-function removeStatBubble(){
-  statBubble?.remove();
-  statBubble=null;
-}
+function removeStatBubble(){statBubble?.remove();statBubble=null;}
 
 function showStatBubble(btn,key){
   removeStatBubble();
@@ -43,6 +33,7 @@ function showStatBubble(btn,key){
   const r=btn.getBoundingClientRect();
   const bubble=document.createElement('div');
   bubble.className='absence-stat-bubble';
+  bubble.dataset.stat=key;
   bubble.innerHTML=`<div class="absence-stat-bubble-title">${TOP_ICONS[key]||''} ${info[0]} <strong>${value}</strong></div><div class="absence-stat-bubble-copy">${info[1]}</div>`;
   document.body.appendChild(bubble);
   const width=Math.min(300,window.innerWidth-24);
@@ -56,9 +47,8 @@ function showStatBubble(btn,key){
 
 function refineTop(){
   document.querySelectorAll('.stat[data-stat]').forEach(btn=>{
-    const key=btn.dataset.stat;
-    const ico=btn.querySelector('.ico');
-    if(ico&&TOP_ICONS[key])ico.textContent=TOP_ICONS[key];
+    const key=btn.dataset.stat,ico=btn.querySelector('.ico');
+    if(ico&&TOP_ICONS[key]&&ico.textContent!==TOP_ICONS[key])ico.textContent=TOP_ICONS[key];
     if(TOP_INFO[key])btn.setAttribute('aria-label',`${TOP_INFO[key][0]} : ${btn.querySelector('.val')?.textContent||''}`);
   });
 }
@@ -68,48 +58,36 @@ function refineBottom(){
   if(!nav)return;
   nav.querySelector('[data-screen="state"]')?.remove();
   nav.querySelectorAll('[data-screen]').forEach(btn=>{
-    const id=btn.dataset.screen;
-    const span=btn.querySelector('span');
-    if(span&&BOTTOM_ICONS[id])span.textContent=BOTTOM_ICONS[id];
+    const id=btn.dataset.screen,span=btn.querySelector('span');
+    if(span&&BOTTOM_ICONS[id]&&span.textContent!==BOTTOM_ICONS[id])span.textContent=BOTTOM_ICONS[id];
   });
-  nav.style.gridTemplateColumns='repeat(4,1fr)';
+  if(nav.style.gridTemplateColumns!=='repeat(4, 1fr)')nav.style.gridTemplateColumns='repeat(4, 1fr)';
 }
 
 function removeInventoryFromHome(){
-  const homeActive=document.querySelector('#bottom-nav .nav.active[data-screen="home"]');
-  if(!homeActive)return;
+  if(!document.querySelector('#bottom-nav .nav.active[data-screen="home"]'))return;
   const host=document.getElementById('view-host');
   if(!host||host.hidden)return;
-  const sections=[...host.querySelectorAll('.section')];
-  const inventorySection=sections.find(x=>x.textContent.trim().toLowerCase()==='sur vous');
-  if(!inventorySection)return;
-  let node=inventorySection;
-  while(node){
-    const next=node.nextSibling;
-    node.remove();
-    node=next;
-  }
+  const section=[...host.querySelectorAll('.section')].find(x=>x.textContent.trim().toLowerCase()==='sur vous');
+  if(!section)return;
+  let node=section;
+  while(node){const next=node.nextSibling;node.remove();node=next;}
 }
 
 function applyRefinements(){
   if(applying)return;
   applying=true;
-  refineTop();
-  refineBottom();
-  removeInventoryFromHome();
+  refineTop();refineBottom();removeInventoryFromHome();
   applying=false;
 }
 
 document.addEventListener('click',ev=>{
   const stat=ev.target.closest('.stat[data-ui="stat"]');
   if(stat){
-    ev.preventDefault();
-    ev.stopImmediatePropagation();
+    ev.preventDefault();ev.stopImmediatePropagation();
     const key=stat.dataset.stat;
-    if(statBubble&&statBubble.dataset.stat===key){removeStatBubble();return;}
-    showStatBubble(stat,key);
-    if(statBubble)statBubble.dataset.stat=key;
-    return;
+    if(statBubble?.dataset.stat===key){removeStatBubble();return;}
+    showStatBubble(stat,key);return;
   }
   if(statBubble&&!ev.target.closest('.absence-stat-bubble'))removeStatBubble();
 },true);
