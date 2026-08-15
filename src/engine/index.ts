@@ -1,4 +1,6 @@
 export { performAction, getContextActions, getContainerActions, getItemActions } from './actions';
+export { addPersistentEffect, activeEffectsAt, advanceWorldEffects, findActiveEffect } from './effects';
+export { applyDueInfrastructureTransitions, isElectricityAvailable, isMobileAvailable, isWaterAvailable, secondsUntilNextInfrastructureTransition } from './infrastructure';
 export { assertValidState, validateState } from './invariants';
 export { loadState, saveState, SAVE_KEY } from './persistence';
 export { environmentPhysiologyModifiers, effectivePhysiologyRates } from './physiology';
@@ -6,4 +8,4 @@ export { connectedDestinations, containerContents, containersAtCurrentLocation, 
 export { createInitialState } from './state';
 export { formatClock } from './time';
 export type { InvariantViolation } from './invariants';
-export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState } from './model';
+export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType } from './model';
