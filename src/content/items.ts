@@ -30,6 +30,7 @@ export interface InspectionComponent {
 export interface ItemDefinition {
   id: string;
   name: string;
+  portable?: boolean;
   inspection?: InspectionComponent;
   battery?: BatteryComponent;
   usable?: UsableComponent;
@@ -107,8 +108,9 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   wall_outlet: Object.freeze({
     id: 'wall_outlet',
     name: 'Prise électrique',
+    portable: false,
     inspection: Object.freeze({
-      role: 'Une prise murale pouvant alimenter ou recharger un appareil compatible.',
+      role: 'Une prise murale fixe pouvant alimenter ou recharger un appareil compatible.',
       operation: 'Elle ne fournit du courant que si le réseau électrique du lieu est encore disponible.',
     }),
     powerSource: Object.freeze({ minimumVoltagePct: 1 }),
