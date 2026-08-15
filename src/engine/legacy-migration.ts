@@ -156,7 +156,7 @@ function legacyItemLocation(item: UnknownRecord, inventory: Set<string>, sourceI
     return { kind: 'inventory' };
   }
   const rawLocation = stringValue(item.locationId) ?? stringValue(state.locationId) ?? stringValue(item.location) ?? stringValue(state.location);
-  if (rawLocation === 'inventory' || rawLocation === 'player' || rawLocation === 'carried') return { kind: 'inventory' };
+  if (rawLocation === 'inventory' || rawLocation === 'player' || rawLocation === 'carried' || rawLocation === 'player_inventory') return { kind: 'inventory' };
   if (rawLocation === 'consumed' || item.consumed === true || state.consumed === true) return { kind: 'consumed' };
   if (rawLocation && target.locations[rawLocation]) return { kind: 'location', id: rawLocation };
   return null;
@@ -185,7 +185,7 @@ function migrateItems(target: GameState, legacy: UnknownRecord): void {
       if (liquid !== null) targetItem.liquidMl = clamp(liquid, 0, targetItem.capacityMl);
     }
 
-    const battery = numberValue(state.batteryPercent ?? state.batteryPct ?? state.chargePercent ?? state.chargePct ?? state.battery);
+    const battery = numberValue(state.batteryPercent ?? state.batteryPct ?? state.batteryChargePct ?? state.chargePercent ?? state.chargePct ?? state.battery);
     if (getItemDefinition(targetItem.definitionId)?.battery && battery !== null) targetItem.batteryPercent = clamp(battery, 0, 100);
 
     const freshness = numberValue(state.freshnessPercent ?? state.freshnessPct ?? state.freshness);
