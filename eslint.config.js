@@ -31,8 +31,12 @@ export default tseslint.config(
     files: ['src/ui/**/*.ts'],
     rules: {
       'no-restricted-imports': ['error', {
+        paths: [
+          { name: '../engine', message: 'UI code must use ../app/game-api, never the broad engine facade.' },
+          { name: '../../engine', message: 'UI code must use the presentation-safe app game API.' },
+        ],
         patterns: [
-          { group: ['../engine/*', '../../engine/*'], message: 'UI code must use the public engine facade, not engine internals.' },
+          { group: ['../engine/*', '../../engine/*'], message: 'UI code must use the presentation-safe app game API, not engine internals.' },
         ],
       }],
     },
