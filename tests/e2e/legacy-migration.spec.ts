@@ -46,14 +46,22 @@ function historicalInventory(state: UnknownRecord): unknown[] {
   throw new Error('Historical inventory not found');
 }
 
-function historicalBottle(state: UnknownRecord): [string, UnknownRecord] {
+function findHistoricalItem(state: UnknownRecord, predicate: (id: string, item: UnknownRecord) => boolean): [string, UnknownRecord] {
   const items = object(state.items);
   for (const [id, raw] of Object.entries(items)) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const item = raw as UnknownRecord;
-    if (id === 'water_bottle_01' || String(item.definitionId ?? '').startsWith('water_bottle')) return [id, item];
+    if (predicate(id, item)) return [id, item];
   }
-  throw new Error('Historical water bottle not found');
+  throw new Error('Historical item not found');
+}
+
+function historicalBottle(state: UnknownRecord): [string, UnknownRecord] {
+  return findHistoricalItem(state, (id, item) => id === 'water_bottle_01' || String(item.definitionId ?? '').startsWith('water_bottle'));
+}
+
+function historicalPhone(state: UnknownRecord): [string, UnknownRecord] {
+  return findHistoricalItem(state, (id, item) => id === 'phone_01' || item.definitionId === 'smartphone');
 }
 
 function mutableItemState(item: UnknownRecord): UnknownRecord {
@@ -75,13 +83,12 @@ test('browser startup atomically promotes a genuine v0.1.11 save to v0.2', async
   stats.pain = 4;
 
   const [waterId, bottle] = historicalBottle(legacyState);
-  const bottleState = mutableItemState(bottle);
-  if ('liquidMl' in bottleState) bottleState.liquidMl = 125;
-  else if ('amountMl' in bottleState) bottleState.amountMl = 125;
-  else if ('waterMl' in bottleState) bottleState.waterMl = 125;
-  else bottleState.liquidMl = 125;
+  mutableItemState(bottle).liquidMl = 125;
   const inventory = historicalInventory(legacyState);
   if (!inventory.includes(waterId)) inventory.push(waterId);
+
+  const [, phone] = historicalPhone(legacyState);
+  mutableItemState(phone).batteryChargePct = 31;
 
   await page.goto('/');
   await page.evaluate((state) => {
@@ -103,6 +110,7 @@ test('browser startup atomically promotes a genuine v0.1.11 save to v0.2', async
   expect(persisted.current?.player?.locationId).toBe('kitchen');
   expect(persisted.current?.items?.water_01?.liquidMl).toBe(125);
   expect(persisted.current?.items?.water_01?.location?.kind).toBe('inventory');
+  expect(persisted.current?.items?.phone_01?.batteryPercent).toBe(31);
   expect(persisted.legacyPresent).toBe(true);
 });
 
