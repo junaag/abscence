@@ -1,5 +1,6 @@
 export { performAction, getContextActions, getContainerActions, getItemActions } from './actions';
 export { addPersistentEffect, activeEffectsAt, advanceWorldEffects, findActiveEffect } from './effects';
+export { describeItemExamination } from './examination';
 export { applyDueInfrastructureTransitions, getMobileNetworkState, isElectricityAvailable, isMobileAvailable, isWaterAvailable, secondsUntilNextInfrastructureTransition } from './infrastructure';
 export { assertValidState, validateState } from './invariants';
 export { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, migrateLegacyPreviewState } from './legacy-migration';
