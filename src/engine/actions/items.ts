@@ -1,4 +1,5 @@
 import { getItemDefinition } from '../../content/items';
+import { applyDueInfrastructureTransitions, isElectricityAvailable, secondsUntilNextInfrastructureTransition } from '../infrastructure';
 import type { EngineTransition, GameState } from '../model';
 import { FOOD_RULES, WATER_RULES } from '../rules';
 import { hasRunningTap, isItemAccessible } from '../selectors';
@@ -78,17 +79,44 @@ export function chargeItem(state: GameState, itemId: string | undefined, sourceI
   const definition = getItemDefinition(item.definitionId); const battery = definition?.battery; const powerSource = getItemDefinition(source.definitionId)?.powerSource;
   if (!battery?.rechargeable || !battery.chargeRatePctPerMinute) return failure(state, 'Impossible', 'Cette batterie n’est pas rechargeable ici.');
   if (!powerSource) return failure(state, 'Impossible', 'Cet objet n’est pas une source électrique.');
-  const electricity = state.infrastructure.electricity;
-  if (!electricity.available || electricity.voltagePercent < powerSource.minimumVoltagePct) return failure(state, 'Pas de courant', 'La source électrique n’est pas alimentée.');
-  const before = item.batteryPercent ?? battery.initialChargePct; if (before >= 100) return failure(state, 'Batterie pleine', 'Aucune recharge n’est nécessaire.');
-  const effectiveRate = battery.chargeRatePctPerMinute * (electricity.voltagePercent / 100);
-  const secondsToFull = ((100 - before) / effectiveRate) * 60;
-  const requested = requestedSeconds === undefined ? Math.ceil(secondsToFull) : Math.max(1, requestedSeconds);
-  const elapsed = Math.min(requested, Math.ceil(secondsToFull));
-  const next = cloneState(state); advanceTime(next, elapsed); const nextItem = next.items[itemId]; if (!nextItem) return failure(state, 'Impossible', 'L’appareil a disparu.');
-  const afterPassiveDrain = nextItem.batteryPercent ?? before;
-  nextItem.batteryPercent = Math.min(100, afterPassiveDrain + effectiveRate * (elapsed / 60));
-  return success(next, `Vous rechargez ${item.name.toLowerCase()}.`, `Batterie : ${nextItem.batteryPercent.toFixed(1)} %.`, elapsed);
+  const initialCharge = item.batteryPercent ?? battery.initialChargePct; if (initialCharge >= 100) return failure(state, 'Batterie pleine', 'Aucune recharge n’est nécessaire.');
+
+  const next = cloneState(state);
+  applyDueInfrastructureTransitions(next);
+  const nextItem = next.items[itemId];
+  if (!nextItem) return failure(state, 'Impossible', 'L’appareil a disparu.');
+
+  let elapsed = 0;
+  let remaining = requestedSeconds === undefined ? Number.POSITIVE_INFINITY : Math.max(1, requestedSeconds);
+  while (remaining > 0 && (nextItem.batteryPercent ?? battery.initialChargePct) < 100) {
+    const electricity = next.infrastructure.electricity;
+    if (!isElectricityAvailable(next) || electricity.voltagePercent < powerSource.minimumVoltagePct) break;
+
+    const effectiveRate = battery.chargeRatePctPerMinute * (electricity.voltagePercent / 100);
+    if (effectiveRate <= 0) break;
+    const currentCharge = nextItem.batteryPercent ?? battery.initialChargePct;
+    const secondsToFull = ((100 - currentCharge) / effectiveRate) * 60;
+    const untilInfrastructureChange = secondsUntilNextInfrastructureTransition(next, remaining);
+    const segment = Math.min(remaining, secondsToFull, untilInfrastructureChange);
+
+    if (!Number.isFinite(segment) || segment <= 0) {
+      const applied = applyDueInfrastructureTransitions(next);
+      if (applied.length === 0) break;
+      continue;
+    }
+
+    advanceTime(next, segment);
+    const afterPassiveDrain = nextItem.batteryPercent ?? currentCharge;
+    nextItem.batteryPercent = Math.min(100, afterPassiveDrain + effectiveRate * (segment / 60));
+    elapsed += segment;
+    remaining -= segment;
+  }
+
+  if (elapsed <= 0) return failure(state, 'Pas de courant', 'La source électrique n’est pas alimentée.');
+  const finalCharge = nextItem.batteryPercent ?? initialCharge;
+  const interrupted = finalCharge < 100 && !isElectricityAvailable(next);
+  const body = interrupted ? `Recharge interrompue à ${finalCharge.toFixed(1)} %.` : `Batterie : ${finalCharge.toFixed(1)} %.`;
+  return success(next, `Vous rechargez ${item.name.toLowerCase()}.`, body, elapsed);
 }
 
 export function examineItem(state: GameState, itemId: string | undefined): EngineTransition {
