@@ -1,5 +1,6 @@
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import { assertValidState, validateState } from './invariants';
+import { loadLegacyPreviewMigration } from './legacy-migration';
 import type { GameState } from './model';
 import { ensurePhoneState } from './phone';
 import { assertValidPhoneState, validatePhoneState } from './phone-validation';
@@ -25,7 +26,10 @@ function isGameState(value: unknown): value is GameState {
 
 export function loadState(storage: ReadStorage): GameState {
   const raw = storage.getItem(SAVE_KEY);
-  if (!raw) return createInitialState();
+  if (!raw) {
+    const legacy = loadLegacyPreviewMigration(storage);
+    return legacy?.state ?? createInitialState();
+  }
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!isGameState(parsed)) return createInitialState();
