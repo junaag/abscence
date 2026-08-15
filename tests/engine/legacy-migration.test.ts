@@ -81,6 +81,10 @@ function historicalBottle(state: Record<string, unknown>): [string, Record<strin
   return findHistoricalItem(state, (id, item) => id === 'water_bottle_01' || String(item.definitionId ?? '').startsWith('water_bottle'));
 }
 
+function historicalPhone(state: Record<string, unknown>): [string, Record<string, unknown>] {
+  return findHistoricalItem(state, (id, item) => id === 'phone_01' || item.definitionId === 'smartphone');
+}
+
 function historicalMutableState(item: Record<string, unknown>): Record<string, unknown> {
   if (item.state && typeof item.state === 'object' && !Array.isArray(item.state)) return object(item.state);
   return item;
@@ -160,6 +164,15 @@ describe('controlled preview save migration', () => {
     expect((migrated.world as typeof migrated.world & { weather?: { condition?: string } }).weather?.condition).toBe('rain');
     expect(migrated.memory.shoutedForWife).toBe(true);
     expect(migrated.memory.visitedLocationIds).toEqual(expect.arrayContaining(['bedroom', 'kitchen']));
+  });
+
+  it('preserves the historical nested smartphone battery charge', () => {
+    const legacy = historicalEngine.createInitialState();
+    const [, phone] = historicalPhone(legacy);
+    historicalMutableState(phone).batteryChargePct = 31;
+
+    const migrated = migrateLegacyPreviewState(legacy)!;
+    expect(migrated.items.phone_01?.batteryPercent).toBe(31);
   });
 
   it('prefers absence-preview-v0111 over the v0.1.9 fallback', () => {
