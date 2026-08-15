@@ -163,9 +163,9 @@ export function setInfrastructureSeed(state: GameState, seed: number | string, r
 }
 
 function cancelFutureAutonomousTransitions(state: GameState, network: Network): void {
-  for (const transition of state.infrastructure.transitions ?? []) {
-    if (transition.network === network && transition.id.startsWith(AUTO_PREFIX) && !transition.processed) transition.processed = true;
-  }
+  state.infrastructure.transitions = (state.infrastructure.transitions ?? []).filter(
+    (transition) => transition.network !== network || !transition.id.startsWith(AUTO_PREFIX) || transition.processed,
+  );
 }
 
 function applyTransition(state: GameState, transition: InfrastructureTransitionState): void {
@@ -193,16 +193,19 @@ function applyTransition(state: GameState, transition: InfrastructureTransitionS
 }
 
 export function applyDueInfrastructureTransitions(state: GameState): InfrastructureTransitionState[] {
-  ensureAutonomousInfrastructureTransitions(state);
   const due = (state.infrastructure.transitions ?? [])
     .filter((transition) => !transition.processed && transition.atSeconds <= state.engine.elapsedSeconds)
     .sort((a, b) => a.atSeconds - b.atSeconds || a.id.localeCompare(b.id));
-  for (const transition of due) applyTransition(state, transition);
-  return due;
+  const applied: InfrastructureTransitionState[] = [];
+  for (const transition of due) {
+    if (!(state.infrastructure.transitions ?? []).includes(transition)) continue;
+    applyTransition(state, transition);
+    applied.push(transition);
+  }
+  return applied;
 }
 
 export function secondsUntilNextInfrastructureTransition(state: GameState, maximumSeconds = Number.POSITIVE_INFINITY): number {
-  ensureAutonomousInfrastructureTransitions(state);
   const maximum = Number.isFinite(maximumSeconds) ? Math.max(0, maximumSeconds) : Number.POSITIVE_INFINITY;
   let result = maximum;
   for (const transition of state.infrastructure.transitions ?? []) {
