@@ -26,6 +26,8 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Source électrique générique et recharge selon disponibilité/tension actuelle.
 - **Interruption de recharge sur transition électrique** : une recharge longue s'arrête exactement à la coupure du réseau et conserve la charge réellement acquise jusque-là.
 - **Transitions d'infrastructure déterministes** pour eau, électricité et réseau mobile, avec instant exact et état persistant de traitement.
+- **Dégradation autonome seedée des réseaux restaurée depuis v0.1.8** : seed 1701 ; électricité 12–72 h puis 8–48 h, eau 24–120 h puis 12–72 h, mobile 3–24 h puis 6–36 h.
+- États instables historiques restaurés : électricité 65–92 %, eau 30–75 %, mobile 15–60 % ; seuils mobile SMS ≥10 %, appels ≥20 %, data ≥30 %.
 - Fraîcheur persistante des périssables : pomme 94 % initial, base 0,2 point/h.
 - Courbe thermique historique de dégradation restaurée de ≤4 °C à >40 °C.
 - Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
@@ -38,17 +40,18 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Mitigation historique des effets restaurée** : éponger avec un torchon (−38, 150 s), ventiler la fumée (−18, 20 s), utiliser 250 ml d’eau sur un feu (−48, 15 s), neutraliser un bruit continu (−100, 25 s) et stopper une fuite (18 s).
 - Les actions de mitigation sont générées par le moteur à partir des effets locaux et lient explicitement les ressources transportées nécessaires.
 - **Événements historiques déterministes restaurés aux instants exacts** : bruit continu dans la cuisine à 5 min, fuite d'eau à 12 min, fumée dans le jardin à 25 min, sans duplication lors des avances de temps suivantes.
-- **Téléphone historique reconnecté côté UI locale** : écran d’accueil, appels récents et messages d’Épouse/Alice/Lilou consultables hors réseau ; batterie et état du réseau affichés depuis le moteur réel, sans indicateur réseau global.
+- **Téléphone historique piloté par GameState** : appels récents et messages d’Épouse/Alice/Lilou sont persistés dans l'état moteur et migrés pour les sauvegardes v0.2-dev plus anciennes ; l'UI ne contient plus ces données en dur.
+- Écran téléphone : historique local consultable hors réseau si l'appareil est transporté et alimenté ; batterie et réseau affichés depuis l'état réel.
+- **Capacités téléphone dérivées par le moteur** : appel, SMS et data suivent batterie + seuils réseau v0.1.8 ; l'historique local reste indépendant du réseau.
 - Smoke mobile couvrant l’ouverture du téléphone, les trois historiques de messages et les trois appels récents.
 - CI reproductible : Node 22, `package-lock.json`, `npm ci`, TypeScript strict, ESLint, Vitest, build Vite et smoke Playwright mobile Pixel 7.
 
 ## À migrer avant promotion
 
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
-- Génération autonome/seedée des évolutions de réseaux au-delà des transitions déterministes déjà supportées par le moteur.
 - Événements autonomes procéduraux avec seed au-delà des trois événements historiques fixes déjà restaurés.
 - Perception auditive / visuelle / olfactive à distance.
-- Téléphone : appel sortant réellement piloté par réseau/batterie, puis reconnexion des écrans Météo et Réglages.
+- Téléphone : actions sortantes appel/SMS et leurs résultats de gameplay ; écrans Météo et Réglages.
 - Carte Leaflet + fog of war géographique persistant.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
 
