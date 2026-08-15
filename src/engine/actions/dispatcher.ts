@@ -3,7 +3,7 @@ import type { ActionId, EngineTransition, GameAction, GameState } from '../model
 import { openContainer } from './containers';
 import { chargeItem, drinkItem, eatItem, examineItem, fillLiquidContainer, takeItem, useItem } from './items';
 import { move, openConnection } from './movement';
-import { drinkTap, shoutForWife, wait } from './world';
+import { douseEffect, drinkTap, mopEffect, shoutForWife, silenceEffect, stopLeak, ventilateEffect, wait } from './world';
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled ABSENCE action: ${String(value)}`);
@@ -23,36 +23,27 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
     case 'USE_ITEM': return useItem(state, action.targetId);
     case 'CHARGE_ITEM': return chargeItem(state, action.targetId, action.sourceId, action.seconds);
     case 'EXAMINE_ITEM': return examineItem(state, action.targetId);
+    case 'MOP_EFFECT': return mopEffect(state, action.targetId, action.sourceId);
+    case 'VENTILATE_EFFECT': return ventilateEffect(state, action.targetId);
+    case 'DOUSE_EFFECT': return douseEffect(state, action.targetId, action.sourceId);
+    case 'SILENCE_EFFECT': return silenceEffect(state, action.targetId);
+    case 'STOP_LEAK': return stopLeak(state);
     case 'SHOUT_FOR_WIFE': return shoutForWife(state);
     case 'WAIT': return wait(state, action.seconds);
     default: return assertNever(id);
   }
 }
 
-/**
- * Single transactional boundary for every gameplay mutation.
- *
- * - refuses to run against a structurally inconsistent world;
- * - failed actions must be true no-ops and retain the exact input state reference;
- * - successful actions must return a distinct, valid state.
- *
- * Individual domain handlers stay simple; this boundary guarantees their contract.
- */
 export function performAction(state: GameState, action: GameAction): EngineTransition {
   assertValidState(state);
   const transition = dispatch(state, action);
 
   if (!transition.result.success) {
-    if (transition.state !== state) {
-      throw new Error(`Failed action ${action.id} violated transaction contract by returning a different state.`);
-    }
+    if (transition.state !== state) throw new Error(`Failed action ${action.id} violated transaction contract by returning a different state.`);
     return transition;
   }
 
-  if (transition.state === state) {
-    throw new Error(`Successful action ${action.id} violated transaction contract by reusing the input state.`);
-  }
-
+  if (transition.state === state) throw new Error(`Successful action ${action.id} violated transaction contract by reusing the input state.`);
   assertValidState(transition.state);
   return transition;
 }
