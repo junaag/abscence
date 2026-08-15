@@ -10,7 +10,7 @@ import type { GameState } from '../../src/engine/model';
 
 interface HistoricalEngine {
   VERSION: string;
-  freshState(): Record<string, unknown>;
+  createInitialState(): Record<string, unknown>;
   ensureState(state: unknown): unknown;
 }
 
@@ -69,11 +69,12 @@ const historicalEngine = loadHistoricalEngine();
 describe('controlled preview save migration', () => {
   it('uses the exact historical v0.1.11 engine as its fixture', () => {
     expect(historicalEngine.VERSION).toBe('0.1.11');
+    expect(typeof historicalEngine.createInitialState).toBe('function');
     expect(LEGACY_PREVIEW_SAVE_KEYS).toEqual(['absence-preview-v0111', 'absence-preview-v019']);
   });
 
   it('migrates a genuine fresh v0.1.11 state into a valid v0.2 state', () => {
-    const migrated = migrateLegacyPreviewState(historicalEngine.freshState());
+    const migrated = migrateLegacyPreviewState(historicalEngine.createInitialState());
     expect(migrated).not.toBeNull();
     expect(validateState(migrated!)).toEqual([]);
     expect(migrated).toMatchObject({
@@ -88,7 +89,7 @@ describe('controlled preview save migration', () => {
   });
 
   it('preserves recognized gameplay progress without resurrecting a consumed apple', () => {
-    const legacy = historicalEngine.freshState();
+    const legacy = historicalEngine.createInitialState();
     const stats = historicalStats(legacy);
     stats.health = 83;
     stats.hunger = 41;
@@ -135,9 +136,9 @@ describe('controlled preview save migration', () => {
 
   it('prefers absence-preview-v0111 over the v0.1.9 fallback', () => {
     const storage = new MemoryStorage();
-    const primary = historicalEngine.freshState();
+    const primary = historicalEngine.createInitialState();
     historicalStats(primary).health = 71;
-    const fallback = historicalEngine.freshState();
+    const fallback = historicalEngine.createInitialState();
     historicalStats(fallback).health = 44;
     storage.setItem('absence-preview-v0111', JSON.stringify(primary));
     storage.setItem('absence-preview-v019', JSON.stringify(fallback));
@@ -152,7 +153,7 @@ describe('controlled preview save migration', () => {
     const v020 = createInitialState();
     v020.player.healthPv = 62;
     storage.setItem(SAVE_KEY, JSON.stringify(v020));
-    const legacy = historicalEngine.freshState();
+    const legacy = historicalEngine.createInitialState();
     historicalStats(legacy).health = 22;
     storage.setItem('absence-preview-v0111', JSON.stringify(legacy));
 
@@ -168,7 +169,7 @@ describe('controlled preview save migration', () => {
   });
 
   it('returns a normal v0.2 GameState type after migration', () => {
-    const migrated: GameState | null = migrateLegacyPreviewState(historicalEngine.freshState());
+    const migrated: GameState | null = migrateLegacyPreviewState(historicalEngine.createInitialState());
     expect(migrated?.schemaVersion).toBe(1);
   });
 });
