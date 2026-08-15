@@ -7,7 +7,7 @@ function partNumber(name: string): number {
   return Number(name.match(/(\d+)/)?.[1] ?? Number.MAX_SAFE_INTEGER);
 }
 
-function snippet(source: string, needle: string, radius = 360): string {
+function snippet(source: string, needle: string, radius = 420): string {
   const index = source.indexOf(needle);
   if (index < 0) return '';
   return source.slice(Math.max(0, index - radius), Math.min(source.length, index + needle.length + radius)).replace(/\s+/g, ' ');
@@ -22,7 +22,9 @@ describe('temporary v0.1.11 engine-state diagnostic', () => {
       .map((name) => readFileSync(`${directory}/${name}`, 'utf8').trim())
       .join('');
     const source = gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8');
-    const engine = runInNewContext(`${source}\n;globalThis.AbsenceEngine;`, {}, { timeout: 1000 }) as { VERSION?: unknown; freshState?: () => unknown; ensureState?: (value: unknown) => unknown } | undefined;
+    const moduleRef: { exports: unknown } = { exports: {} };
+    runInNewContext(source, { module: moduleRef }, { timeout: 1000 });
+    const engine = moduleRef.exports as { VERSION?: unknown; freshState?: () => unknown; ensureState?: (value: unknown) => unknown } | undefined;
     if (!engine?.freshState) throw new Error('V0111_ENGINE_EXPORT_MISSING=' + snippet(source, 'AbsenceEngine'));
     const freshState = engine.freshState();
     throw new Error('V0111_ENGINE_CONTRACT=' + JSON.stringify({
