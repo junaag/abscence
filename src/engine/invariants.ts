@@ -24,6 +24,10 @@ export function validateState(state: GameState): InvariantViolation[] {
     errors.push(violation('HEALTH_OUT_OF_RANGE', `Health must stay between 0 and 100 PV, got ${state.player.healthPv}.`));
   }
 
+  if (!Number.isFinite(state.engine.damageBudgetPv) || state.engine.damageBudgetPv < 0 || state.engine.damageBudgetPv >= 1) {
+    errors.push(violation('DAMAGE_BUDGET_INVALID', `Fractional PV damage budget must stay in [0, 1), got ${state.engine.damageBudgetPv}.`));
+  }
+
   for (const [key, value] of Object.entries(state.player.needs) as Array<[keyof NeedsState, number]>) {
     if (!isPercent(value)) errors.push(violation('NEED_OUT_OF_RANGE', `${key} must stay between 0 and 100, got ${value}.`));
   }

@@ -1,4 +1,4 @@
-# Parité v0.1.11 → v0.2.0
+# Parité v0.1.11 / moteur historique v0.1.8 → v0.2.0
 
 La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 
@@ -9,6 +9,10 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Faim +1 % / 25 min.
 - Soif +1 % / 15 min.
 - Fatigue +1 % / 20 min.
+- **Perte de PV critique historique restaurée exactement** : budget fractionnaire persistant, soif ≥90/100 et faim ≥90/100.
+- Régression historique couverte : soif 95 %, +30 min → soif 97 %, santé −1 PV.
+- Calcul critique indépendant de la taille des pas de simulation.
+- Mort logique lorsque la santé atteint 0 PV.
 - Déplacements via un graphe de connexions unique.
 - Inventaire et emplacement persistant des objets.
 - Pomme : faim −9, soif −4, durée 120 s.
@@ -20,10 +24,11 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Examiner un objet sans en faire un verrou d'utilisation.
 - Narratif de lieu dérivé de l'état réel.
 - Sauvegarde v0.2.0 isolée et versionnée.
+- Validation des invariants de `GameState` avant sauvegarde.
 
 ## À migrer avant promotion
 
-- Courbe exacte de perte de PV liée aux besoins critiques.
+- Modificateurs de physiologie liés à la température/météo.
 - Portes / serrures / clés complètes.
 - Batteries et recharge génériques.
 - Périssables / réfrigération.
@@ -34,3 +39,7 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Téléphone / messages.
 - Carte Leaflet + fog of war géographique persistant.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
+
+## Décision UX qui remplace une règle historique
+
+Le moteur v0.1.8 distinguait ouverture et fouille de contenus cachés. La conception actuelle d'ABSENCE simplifie volontairement ce flux : **ouvrir un contenant révèle directement son contenu accessible**. `Examiner` reste une action informative indépendante.

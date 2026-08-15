@@ -24,6 +24,11 @@ export interface WorldClock {
   secondOfDay: number;
 }
 
+export interface EngineSimulationState {
+  /** Fractional PV accumulated by critical needs, carried between time advances. */
+  damageBudgetPv: number;
+}
+
 export interface LocationFeatures {
   tap?: boolean;
   powerOutlet?: boolean;
@@ -94,6 +99,7 @@ export interface GameState {
   schemaVersion: 1;
   gameVersion: '0.2.0-dev';
   clock: WorldClock;
+  engine: EngineSimulationState;
   player: PlayerState;
   locations: Record<LocationId, LocationState>;
   connections: Record<ConnectionId, ConnectionState>;

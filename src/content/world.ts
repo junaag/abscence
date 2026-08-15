@@ -4,6 +4,7 @@ export const INITIAL_STATE: GameState = {
   schemaVersion: 1,
   gameVersion: '0.2.0-dev',
   clock: { day: 1, secondOfDay: 7 * 3600 + 12 * 60 },
+  engine: { damageBudgetPv: 0 },
   player: {
     locationId: 'bedroom',
     healthPv: 100,
