@@ -4,6 +4,7 @@ export { applyDueInfrastructureTransitions, getMobileNetworkState, isElectricity
 export { assertValidState, validateState } from './invariants';
 export { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, migrateLegacyPreviewState } from './legacy-migration-compat';
 export { ensureLocationEnvironmentState, getLocationEnvironment, getLocationTemperatureC, getPlayerEnvironment, setLocationEnvironment } from './location-environment';
+export { assertValidLocationEnvironmentState, validateLocationEnvironmentState } from './location-environment-validation';
 export { loadState, saveState, SAVE_KEY } from './persistence';
 export { getDistanceMeters, getPerceivedWorldEvents, getWorldEventPerception } from './perception';
 export { getPhoneCapabilities, phoneCalls, phoneDeviceItemId, phoneMessages } from './phone';
@@ -16,6 +17,7 @@ export { addWorldEventSource, applyDueWorldEventTransitions, createWorldEventSou
 export type { InvariantViolation } from './invariants';
 export type { LegacyMigrationResult } from './legacy-migration-compat';
 export type { LocationEnvironmentState, LocationEnvironmentType, PlayerEnvironmentState } from './location-environment';
+export type { LocationEnvironmentViolation } from './location-environment-validation';
 export type { PerceptionChannel, PerceptionChannelId, WorldEventPerception } from './perception';
 export type { PhoneCapabilities } from './phone';
 export type { WeatherCondition, WeatherState } from './weather';
