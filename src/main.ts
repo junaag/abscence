@@ -5,10 +5,15 @@ const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('Missing #app root');
 
 const persistence = createBrowserPersistence(window.localStorage);
-mountApp(root, persistence.load(), {
+const initialState = persistence.load();
+const preferences = persistence.loadPreferences();
+const mapState = persistence.loadMapState();
+
+mountApp(root, initialState, {
   persist: (state) => persistence.save(state),
-  preferences: persistence.loadPreferences(),
-  persistPreferences: (preferences) => persistence.savePreferences(preferences),
-  mapState: persistence.loadMapState(),
-  persistMapState: (mapState) => persistence.saveMapState(mapState),
+  preferences,
+  persistPreferences: (nextPreferences) => persistence.savePreferences(nextPreferences),
+  mapState,
+  persistMapState: (nextMapState) => persistence.saveMapState(nextMapState),
+  initialPersistenceWarning: persistence.hasStorageFailure(),
 });
