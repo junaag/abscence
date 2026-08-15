@@ -13,7 +13,9 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Régression historique couverte : soif 95 %, +30 min → soif 97 %, santé −1 PV.
 - Calcul critique indépendant de la taille des pas de simulation.
 - Mort logique lorsque la santé atteint 0 PV.
-- Déplacements via un graphe de connexions unique.
+- Graphe de lieux canonique.
+- **Connexions/portes v0.1.8 migrées** : `open`, `locked`, durée d'ouverture et durée de traversée distinctes.
+- Une connexion fermée doit être ouverte avant le déplacement ; une connexion verrouillée bloque ouverture et déplacement.
 - Inventaire et emplacement persistant des objets.
 - Pomme : faim −9, soif −4, durée 120 s.
 - Liquides en ml et bouteille de 500 ml.
@@ -29,7 +31,7 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 ## À migrer avant promotion
 
 - Modificateurs de physiologie liés à la température/météo.
-- Portes / serrures / clés complètes.
+- **Système générique clé → serrure → déverrouillage** (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
 - Batteries et recharge génériques.
 - Périssables / réfrigération.
 - Réseaux eau / électricité / mobile autonomes et déterministes.

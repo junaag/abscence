@@ -40,13 +40,20 @@ export interface LocationState {
   features: LocationFeatures;
 }
 
+/**
+ * Canonical world-graph edge. Mirrors the v0.1.8 connection contract:
+ * a connection can be open/closed and locked/unlocked, with separate opening
+ * and traversal durations.
+ */
 export interface ConnectionState {
   id: ConnectionId;
   a: LocationId;
   b: LocationId;
-  durationSeconds: number;
-  blocked: boolean;
+  type: 'door' | 'passage';
+  open: boolean;
   locked: boolean;
+  openSeconds: number;
+  travelSeconds: number;
 }
 
 export interface ContainerState {
@@ -111,6 +118,7 @@ export interface GameState {
 
 export type ActionId =
   | 'MOVE'
+  | 'OPEN_CONNECTION'
   | 'OPEN_CONTAINER'
   | 'TAKE_ITEM'
   | 'EAT_ITEM'

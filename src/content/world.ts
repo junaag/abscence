@@ -18,8 +18,14 @@ export const INITIAL_STATE: GameState = {
     garden: { id: 'garden', name: 'Jardin', features: {} },
   },
   connections: {
-    bedroom_kitchen: { id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', durationSeconds: 12, blocked: false, locked: false },
-    kitchen_garden: { id: 'kitchen_garden', a: 'kitchen', b: 'garden', durationSeconds: 10, blocked: false, locked: false },
+    bedroom_kitchen: {
+      id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', type: 'door',
+      open: true, locked: false, openSeconds: 2, travelSeconds: 12,
+    },
+    kitchen_garden: {
+      id: 'kitchen_garden', a: 'kitchen', b: 'garden', type: 'door',
+      open: true, locked: false, openSeconds: 2, travelSeconds: 10,
+    },
   },
   containers: {
     bedroom_drawer: { id: 'bedroom_drawer', name: 'Tiroir de la table de nuit', locationId: 'bedroom', open: false, locked: false, contentIds: ['spare_key_01'] },

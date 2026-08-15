@@ -36,7 +36,8 @@ export function validateState(state: GameState): InvariantViolation[] {
     if (!state.locations[connection.a]) errors.push(violation('CONNECTION_ENDPOINT_MISSING', `${connection.id}.a points to missing location ${connection.a}.`));
     if (!state.locations[connection.b]) errors.push(violation('CONNECTION_ENDPOINT_MISSING', `${connection.id}.b points to missing location ${connection.b}.`));
     if (connection.a === connection.b) errors.push(violation('CONNECTION_SELF_LOOP', `${connection.id} connects a location to itself.`));
-    if (!Number.isFinite(connection.durationSeconds) || connection.durationSeconds < 0) errors.push(violation('CONNECTION_DURATION_INVALID', `${connection.id} has invalid duration.`));
+    if (!Number.isFinite(connection.openSeconds) || connection.openSeconds < 0) errors.push(violation('CONNECTION_OPEN_DURATION_INVALID', `${connection.id} has invalid openSeconds.`));
+    if (!Number.isFinite(connection.travelSeconds) || connection.travelSeconds < 0) errors.push(violation('CONNECTION_TRAVEL_DURATION_INVALID', `${connection.id} has invalid travelSeconds.`));
   }
 
   const inventorySeen = new Set<string>();
