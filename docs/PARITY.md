@@ -24,6 +24,8 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Téléphone : 78 % initial, −0,03 % par usage, recharge 2 %/min.
 - Lampe : 64 % initial, −0,02 % par usage, −0,25 %/min lorsqu'elle est allumée.
 - Source électrique générique et recharge selon disponibilité/tension actuelle.
+- **Interruption de recharge sur transition électrique** : une recharge longue s'arrête exactement à la coupure du réseau et conserve la charge réellement acquise jusque-là.
+- **Transitions d'infrastructure déterministes** pour eau, électricité et réseau mobile, avec instant exact et état persistant de traitement. Aucun planning de panne arbitraire n'est activé par défaut.
 - Fraîcheur persistante des périssables : pomme 94 % initial, base 0,2 point/h.
 - Courbe thermique historique de dégradation restaurée de ≤4 °C à >40 °C.
 - Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
@@ -31,14 +33,15 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Effets persistants historiques restaurés** : eau au sol, fumée, feu et bruit continu avec intensité persistante, croissance/décroissance, propagation par connexions ouvertes, ventilation et fenêtre pour la fumée.
 - Impacts locaux des effets restaurés : stress, douleur et budget de dégâts PV pour fumée/feu dangereux.
 - Narratif local enrichi à partir des effets réellement actifs dans le lieu.
+- **Événements historiques déterministes restaurés aux instants exacts** : bruit continu dans la cuisine à 5 min, fuite d'eau à 12 min, fumée dans le jardin à 25 min, sans duplication lors des avances de temps suivantes.
+- CI reproductible : Node 22, `package-lock.json`, `npm ci`, TypeScript strict, ESLint, Vitest, build Vite et smoke Playwright mobile Pixel 7.
 
 ## À migrer avant promotion
 
 - Multiplicateur réfrigéré historique additionnel `0,25` : valeur connue mais combinaison exacte avec la courbe thermique à revérifier dans la source historique avant activation.
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
-- Interruption de recharge pendant une transition autonome du réseau électrique.
-- Réseaux eau / électricité / mobile autonomes et déterministes.
-- Événements autonomes avec seed.
+- Génération autonome/seedée des évolutions de réseaux au-delà des transitions déterministes déjà supportées par le moteur.
+- Événements autonomes procéduraux avec seed au-delà des trois événements historiques fixes déjà restaurés.
 - Perception auditive / visuelle / olfactive à distance.
 - Actions de mitigation des effets persistants : éponger, ventiler, éteindre un feu, stopper une fuite/source de bruit.
 - Téléphone / messages.
