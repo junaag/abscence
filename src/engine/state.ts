@@ -1,5 +1,6 @@
 import { INITIAL_STATE } from '../content/world';
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
+import { ensureLocationEnvironmentState } from './location-environment';
 import type { GameState } from './model';
 import { ensureWeatherState } from './weather';
 import { ensureWorldEventSimulationState } from './world-events';
@@ -9,6 +10,7 @@ export function createInitialState(): GameState {
   ensureAutonomousInfrastructureTransitions(state);
   ensureWorldEventSimulationState(state);
   ensureWeatherState(state);
+  ensureLocationEnvironmentState(state);
   return state;
 }
 
