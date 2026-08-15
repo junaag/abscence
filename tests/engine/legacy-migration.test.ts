@@ -69,12 +69,17 @@ function normalizedName(item: Record<string, unknown>): string {
 }
 
 function findHistoricalItem(state: Record<string, unknown>, predicate: (id: string, item: Record<string, unknown>) => boolean): [string, Record<string, unknown>] {
-  for (const [id, raw] of Object.entries(historicalItems(state))) {
+  const items = historicalItems(state);
+  for (const [id, raw] of Object.entries(items)) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const item = raw as Record<string, unknown>;
     if (predicate(id, item)) return [id, item];
   }
-  throw new Error('Historical item not found');
+  const summary = Object.entries(items).map(([id, raw]) => {
+    const item = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    return { id, keys: Object.keys(item).sort(), name: item.name ?? item.label ?? item.displayName, type: item.type, kind: item.kind, definitionId: item.definitionId };
+  });
+  throw new Error(`Historical item not found: ${JSON.stringify(summary)}`);
 }
 
 function historicalApple(state: Record<string, unknown>): [string, Record<string, unknown>] {
