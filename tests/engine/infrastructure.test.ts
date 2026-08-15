@@ -71,6 +71,7 @@ describe('deterministic infrastructure transitions', () => {
     advanceTime(state, 7200);
 
     expect(state.infrastructure.electricity.available).toBe(false);
-    expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.75, 6);
+    // 1 h refrigerated at 4 C, then 1 h at the historical default kitchen temperature of 21 C.
+    expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.738, 6);
   });
 });
