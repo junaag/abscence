@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { getItemActions, performAction } from '../../src/engine/actions';
+import { describeItemExamination } from '../../src/engine/examination';
 import type { GameState, ItemState } from '../../src/engine/model';
 import { createInitialState } from '../../src/engine/state';
 import { advanceTime } from '../../src/engine/time';
 
 function addInventoryItem(state: GameState, item: ItemState): void { state.items[item.id] = item; state.player.inventoryIds.push(item.id); }
-function addOutlet(state: GameState): void { state.items.outlet_01 = { id: 'outlet_01', definitionId: 'wall_outlet', name: 'Prise électrique', location: { kind: 'location', id: 'kitchen' }, examined: false }; }
 
 describe('generic battery resources from engine v0.1.8', () => {
   it('starts the smartphone at the historical 78% charge and spends 0.03% per use', () => {
@@ -43,9 +43,28 @@ describe('generic battery resources from engine v0.1.8', () => {
     expect(result.state.items.flashlight_01?.batteryPercent).toBeLessThan(63.99);
   });
 
-  it('charges a rechargeable item from a powered generic source', () => {
+  it('provides a fixed wall outlet in the playable kitchen', () => {
     let state = createInitialState();
-    addOutlet(state);
+    expect(state.items.outlet_01).toMatchObject({ definitionId: 'wall_outlet', location: { kind: 'location', id: 'kitchen' } });
+    state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
+    expect(getItemActions(state, 'outlet_01').map((action) => action.id)).toEqual(['EXAMINE_ITEM']);
+    const take = performAction(state, { id: 'TAKE_ITEM', targetId: 'outlet_01' });
+    expect(take.result.success).toBe(false);
+    expect(take.result.title).toBe('Objet fixe');
+    expect(take.state).toBe(state);
+  });
+
+  it('describes the outlet electrical state from the live infrastructure', () => {
+    let state = createInitialState();
+    state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
+    expect(describeItemExamination(state, 'outlet_01')).toContain('réseau disponible (100 %)');
+    state.infrastructure.electricity.available = false;
+    state.infrastructure.electricity.voltagePercent = 0;
+    expect(describeItemExamination(state, 'outlet_01')).toContain('hors tension');
+  });
+
+  it('charges a rechargeable item from the real kitchen outlet', () => {
+    let state = createInitialState();
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
     const actions = getItemActions(state, 'phone_01');
     const charge = actions.find((action) => action.id === 'CHARGE_ITEM');
@@ -58,7 +77,6 @@ describe('generic battery resources from engine v0.1.8', () => {
 
   it('cannot charge when electricity is unavailable', () => {
     let state = createInitialState();
-    addOutlet(state);
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
     state.infrastructure.electricity.available = false;
     state.infrastructure.electricity.voltagePercent = 0;
@@ -69,7 +87,6 @@ describe('generic battery resources from engine v0.1.8', () => {
 
   it('interrupts a long recharge exactly when electricity goes off', () => {
     let state = createInitialState();
-    addOutlet(state);
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
     state.infrastructure.transitions = [{
       id: 'power_off_during_charge',
