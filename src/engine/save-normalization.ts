@@ -31,6 +31,12 @@ export function normalizePersistedGameState(value: unknown): GameState | null {
   if (!hasCurrentSaveShape(value)) return null;
 
   const state = structuredClone(value);
+
+  // Missing location environment metadata is a supported older v0.2-dev shape,
+  // but metadata that is already present and invalid is corruption. Validate
+  // before normalization so defaults cannot silently hide an invalid value.
+  if (validateLocationEnvironmentState(state).length > 0) return null;
+
   ensureAutonomousInfrastructureTransitions(state);
   ensureWorldEventSimulationState(state);
   ensureWeatherState(state);
