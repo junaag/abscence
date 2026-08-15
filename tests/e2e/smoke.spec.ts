@@ -23,7 +23,7 @@ test('phone restores local calls and messages with engine battery and network st
   await page.getByRole('button', { name: /Téléphone/ }).click();
   await expect(page.getByTestId('phone-view')).toBeVisible();
   await expect(page.getByTestId('phone-status')).toContainText('Batterie 78 %');
-  await expect(page.getByTestId('phone-status')).toContainText('Réseau 3/4');
+  await expect(page.getByTestId('phone-status')).toContainText('Réseau 4/4');
 
   await page.getByRole('button', { name: 'Messages' }).click();
   await expect(page.getByText('« Tu peux penser au pain ? » · hier 19:03')).toBeVisible();
