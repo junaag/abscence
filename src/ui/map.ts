@@ -1,5 +1,6 @@
 import * as L from 'leaflet';
 import { DEFAULT_HOME_COORDINATES, normalizeMapUiState, updateMapViewport, type ExploredMapArea, type MapUiState } from '../app/map-state';
+import { fetchOverpassPois, mapDistanceMeters, mapPoiCacheKey, MAP_POI_MAX_HOME_DISTANCE_M, MAP_POI_MIN_ZOOM, type MapPoi, type MapPoiCategory } from './map-pois';
 
 class FogCanvasLayer extends L.Layer {
   private canvas: HTMLCanvasElement | null = null;
@@ -92,6 +93,33 @@ class FogCanvasLayer extends L.Layer {
   }
 }
 
+const POI_SYMBOLS: Record<MapPoiCategory, string> = {
+  Industrie: '▦',
+  Commerce: '●',
+  Services: '◆',
+  'Services publics': '+',
+  Résidentiel: '⌂',
+};
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
+}
+
+function poiIcon(poi: MapPoi): L.DivIcon {
+  const category = escapeHtml(poi.category);
+  return L.divIcon({
+    className: 'absence-poi-marker',
+    html: `<span data-poi-category="${category}" aria-label="${category}">${POI_SYMBOLS[poi.category]}</span>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+    popupAnchor: [0, -14],
+  });
+}
+
+function poiPopup(poi: MapPoi): string {
+  return `<div class="map-popup poi-popup"><strong>${escapeHtml(poi.category)}</strong><span>${escapeHtml(poi.name)}</span><small>${escapeHtml(poi.typeLabel)}</small></div>`;
+}
+
 export interface MapController {
   attach(slot: HTMLElement): void;
   detach(): void;
@@ -107,7 +135,12 @@ export function createMapController(initialState: MapUiState, persist: (state: M
   let state = normalizeMapUiState(initialState);
   let map: L.Map | null = null;
   let fog: FogCanvasLayer | null = null;
+  let poiLayer: L.LayerGroup | null = null;
   let hideTimer: number | null = null;
+  let poiTimer: number | null = null;
+  let poiAbort: AbortController | null = null;
+  let poiRequestSequence = 0;
+  const poiCache = new Map<string, MapPoi[]>();
 
   const startInteraction = (): void => {
     if (hideTimer !== null) window.clearTimeout(hideTimer);
@@ -124,6 +157,75 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     persist(structuredClone(state));
   };
 
+  const renderPois = (pois: readonly MapPoi[]): void => {
+    if (!map || !poiLayer) return;
+    poiLayer.clearLayers();
+    for (const poi of pois) {
+      L.marker([poi.lat, poi.lng], { icon: poiIcon(poi), pane: 'poiPane', keyboard: true, title: poi.name })
+        .bindPopup(poiPopup(poi))
+        .addTo(poiLayer);
+    }
+  };
+
+  const rememberPois = (key: string, pois: MapPoi[]): void => {
+    if (poiCache.has(key)) poiCache.delete(key);
+    poiCache.set(key, structuredClone(pois));
+    while (poiCache.size > 4) {
+      const oldest = poiCache.keys().next().value as string | undefined;
+      if (!oldest) break;
+      poiCache.delete(oldest);
+    }
+  };
+
+  const clearPoiRequest = (): void => {
+    if (poiTimer !== null) window.clearTimeout(poiTimer);
+    poiTimer = null;
+    poiAbort?.abort();
+    poiAbort = null;
+  };
+
+  const loadPois = async (): Promise<void> => {
+    poiTimer = null;
+    if (!map || !host.isConnected || map.getZoom() < MAP_POI_MIN_ZOOM) {
+      poiLayer?.clearLayers();
+      return;
+    }
+    const center = map.getCenter();
+    const centerPoint = { lat: center.lat, lng: center.lng };
+    if (mapDistanceMeters(centerPoint, DEFAULT_HOME_COORDINATES) > MAP_POI_MAX_HOME_DISTANCE_M) {
+      poiLayer?.clearLayers();
+      return;
+    }
+    const key = mapPoiCacheKey(centerPoint);
+    const cached = poiCache.get(key);
+    if (cached) {
+      renderPois(cached);
+      return;
+    }
+
+    poiAbort?.abort();
+    const controller = new AbortController();
+    poiAbort = controller;
+    const sequence = ++poiRequestSequence;
+    const timeout = window.setTimeout(() => controller.abort(), 4500);
+    try {
+      const pois = await fetchOverpassPois(centerPoint, controller.signal);
+      if (sequence !== poiRequestSequence) return;
+      rememberPois(key, pois);
+      if (map && host.isConnected && mapPoiCacheKey({ lat: map.getCenter().lat, lng: map.getCenter().lng }) === key) renderPois(pois);
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) console.warn('ABSENCE map POIs unavailable.', error);
+    } finally {
+      window.clearTimeout(timeout);
+      if (poiAbort === controller) poiAbort = null;
+    }
+  };
+
+  const schedulePoiLoad = (delayMs = 900): void => {
+    if (poiTimer !== null) window.clearTimeout(poiTimer);
+    poiTimer = window.setTimeout(() => { void loadPois(); }, delayMs);
+  };
+
   const ensureMap = (): void => {
     if (map) return;
     map = L.map(host, { zoomControl: false, preferCanvas: true, minZoom: 3, maxZoom: 20 }).setView([state.center.lat, state.center.lng], state.zoom);
@@ -137,7 +239,10 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     const fogPane = map.createPane('fogPane');
     fogPane.style.zIndex = '430';
     fogPane.style.pointerEvents = 'none';
+    const poiPane = map.createPane('poiPane');
+    poiPane.style.zIndex = '650';
     fog = new FogCanvasLayer(state.explored).addTo(map);
+    poiLayer = L.layerGroup().addTo(map);
 
     const homeIcon = L.divIcon({ className: 'absence-home-marker', html: '<span aria-label="Maison">🏠</span>', iconSize: [36, 36], iconAnchor: [18, 18] });
     L.marker([DEFAULT_HOME_COORDINATES.lat, DEFAULT_HOME_COORDINATES.lng], { icon: homeIcon, zIndexOffset: 1000 })
@@ -147,6 +252,7 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     map.on('movestart zoomstart', startInteraction);
     map.on('moveend zoomend', endInteraction);
     map.on('moveend zoomend', saveViewport);
+    map.on('moveend zoomend', () => schedulePoiLoad());
   };
 
   return {
@@ -154,9 +260,13 @@ export function createMapController(initialState: MapUiState, persist: (state: M
       ensureMap();
       if (host.parentElement !== slot) slot.append(host);
       fog?.setAreas(state.explored);
-      window.requestAnimationFrame(() => map?.invalidateSize({ animate: false }));
+      window.requestAnimationFrame(() => {
+        map?.invalidateSize({ animate: false });
+        schedulePoiLoad();
+      });
     },
     detach(): void {
+      clearPoiRequest();
       host.remove();
       document.body.classList.remove('map-moving');
     },
@@ -164,16 +274,19 @@ export function createMapController(initialState: MapUiState, persist: (state: M
       state = normalizeMapUiState(nextState);
       fog?.setAreas(state.explored);
       if (map) map.setView([state.center.lat, state.center.lng], state.zoom, { animate: false });
+      schedulePoiLoad();
     },
     getState(): MapUiState {
       return structuredClone(state);
     },
     destroy(): void {
+      clearPoiRequest();
       if (hideTimer !== null) window.clearTimeout(hideTimer);
       document.body.classList.remove('map-moving');
       map?.remove();
       map = null;
       fog = null;
+      poiLayer = null;
       host.remove();
     },
   };
