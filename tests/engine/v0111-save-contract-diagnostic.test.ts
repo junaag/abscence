@@ -23,8 +23,8 @@ describe('temporary v0.1.11 engine-state diagnostic', () => {
       .join('');
     const source = gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8');
     const context: Record<string, unknown> = {};
-    runInNewContext(source, context, { timeout: 1000 });
-    const engine = context.AbsenceEngine as { VERSION?: unknown; freshState?: () => unknown; ensureState?: (value: unknown) => unknown } | undefined;
+    runInNewContext(`${source}\n;globalThis.__absenceEngineDiagnostic = globalThis.AbsenceEngine;`, context, { timeout: 1000 });
+    const engine = context.__absenceEngineDiagnostic as { VERSION?: unknown; freshState?: () => unknown; ensureState?: (value: unknown) => unknown } | undefined;
     if (!engine?.freshState) throw new Error('V0111_ENGINE_EXPORT_MISSING=' + snippet(source, 'AbsenceEngine'));
     const freshState = engine.freshState();
     throw new Error('V0111_ENGINE_CONTRACT=' + JSON.stringify({
