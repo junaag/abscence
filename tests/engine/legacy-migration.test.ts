@@ -64,6 +64,33 @@ function historicalItems(state: Record<string, unknown>): Record<string, unknown
   return object(state.items);
 }
 
+function normalizedName(item: Record<string, unknown>): string {
+  return String(item.name ?? item.label ?? item.displayName ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+
+function findHistoricalItem(state: Record<string, unknown>, predicate: (id: string, item: Record<string, unknown>) => boolean): [string, Record<string, unknown>] {
+  for (const [id, raw] of Object.entries(historicalItems(state))) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const item = raw as Record<string, unknown>;
+    if (predicate(id, item)) return [id, item];
+  }
+  throw new Error('Historical item not found');
+}
+
+function historicalApple(state: Record<string, unknown>): [string, Record<string, unknown>] {
+  return findHistoricalItem(state, (_id, item) => {
+    const name = normalizedName(item);
+    return name.includes('pomme') || name.includes('apple') || item.type === 'food' || item.kind === 'food';
+  });
+}
+
+function historicalBottle(state: Record<string, unknown>): [string, Record<string, unknown>] {
+  return findHistoricalItem(state, (_id, item) => {
+    const name = normalizedName(item);
+    return name.includes('bouteille') || name.includes('bottle') || typeof item.capacityMl === 'number' || typeof item.liquidMl === 'number' || typeof item.waterMl === 'number';
+  });
+}
+
 const historicalEngine = loadHistoricalEngine();
 
 describe('controlled preview save migration', () => {
@@ -99,11 +126,15 @@ describe('controlled preview save migration', () => {
     stats.pain = 14;
 
     const items = historicalItems(legacy);
-    delete items.apple_01;
-    const water = object(items.water_01);
-    water.liquidMl = 125;
+    const [appleId] = historicalApple(legacy);
+    delete items[appleId];
+    const [waterId, water] = historicalBottle(legacy);
+    if ('liquidMl' in water) water.liquidMl = 125;
+    else if ('amountMl' in water) water.amountMl = 125;
+    else if ('waterMl' in water) water.waterMl = 125;
+    else water.liquidMl = 125;
     const inventory = historicalInventory(legacy);
-    if (!inventory.includes('water_01')) inventory.push('water_01');
+    if (!inventory.includes(waterId)) inventory.push(waterId);
 
     const world = historicalWorld(legacy);
     world.powerAvailable = false;
@@ -114,10 +145,7 @@ describe('controlled preview save migration', () => {
       id: 'legacy_smoke', type: 'smoke', locationId: 'kitchen', intensity: 32, active: true,
       spreading: true, createdAtSeconds: 30, updatedAtSeconds: 60,
     }];
-    legacy.memory = {};
-    const memory = object(legacy.memory);
-    memory.shoutedForWife = true;
-    memory.visitedLocationIds = ['bedroom', 'kitchen'];
+    legacy.memory = { shoutedForWife: true, visitedLocationIds: ['bedroom', 'kitchen'] };
 
     const migrated = migrateLegacyPreviewState(legacy)!;
     expect(validateState(migrated)).toEqual([]);
