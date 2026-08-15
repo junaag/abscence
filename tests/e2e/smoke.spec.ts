@@ -18,3 +18,21 @@ test('container opens in popup and reveals contents immediately', async ({ page 
   await page.getByRole('button', { name: /Ouvrir/ }).click();
   await expect(page.getByText('Petite clé', { exact: true })).toBeVisible();
 });
+
+test('phone restores local calls and messages with engine battery and network status', async ({ page }) => {
+  await page.getByRole('button', { name: /Téléphone/ }).click();
+  await expect(page.getByTestId('phone-view')).toBeVisible();
+  await expect(page.getByTestId('phone-status')).toContainText('Batterie 78 %');
+  await expect(page.getByTestId('phone-status')).toContainText('Réseau 3/4');
+
+  await page.getByRole('button', { name: 'Messages' }).click();
+  await expect(page.getByText('« Tu peux penser au pain ? » · hier 19:03')).toBeVisible();
+  await expect(page.getByText('« ok papa » · hier 17:48')).toBeVisible();
+  await expect(page.getByText('Photo · hier 17:31')).toBeVisible();
+
+  await page.getByRole('button', { name: /Accueil/ }).click();
+  await page.getByRole('button', { name: 'Appels' }).click();
+  await expect(page.getByText('Dernier appel hier · 22:41')).toBeVisible();
+  await expect(page.getByText('Hier · 18:12')).toBeVisible();
+  await expect(page.getByText('Hier · 18:09')).toBeVisible();
+});
