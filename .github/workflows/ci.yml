@@ -30,6 +30,13 @@ jobs:
       - run: npm run lint
       - run: npm run test
       - run: npm run build:bundle
+      - name: Package validated v0.2 preview bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: v020-preview-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 3
 
   e2e-mobile:
     runs-on: ubuntu-latest
