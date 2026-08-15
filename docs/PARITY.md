@@ -28,6 +28,8 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Transitions d'infrastructure déterministes** pour eau, électricité et réseau mobile, avec instant exact et état persistant de traitement.
 - **Dégradation autonome seedée des réseaux restaurée depuis v0.1.8** : seed 1701 ; électricité 12–72 h puis 8–48 h, eau 24–120 h puis 12–72 h, mobile 3–24 h puis 6–36 h.
 - États instables historiques restaurés : électricité 65–92 %, eau 30–75 %, mobile 15–60 % ; seuils mobile SMS ≥10 %, appels ≥20 %, data ≥30 %.
+- **Météo v0.1.8 restaurée dans l’état persistant** : `clear`, `partly_cloudy`, `cloudy`, `rain`, `storm`, `fog`, avec défauts historiques 23 °C, 55 %, vent 8 km/h et 0 mm/h.
+- Normalisation météo historique restaurée : température bornée −30…55 °C, humidité 0…100 %, vent et précipitations non négatifs ; migration automatique des sauvegardes v0.2-dev sans météo.
 - Fraîcheur persistante des périssables : pomme 94 % initial, base 0,2 point/h.
 - Courbe thermique historique de dégradation restaurée de ≤4 °C à >40 °C.
 - Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
@@ -50,16 +52,19 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Téléphone historique piloté par GameState** : appels récents et messages d’Épouse/Alice/Lilou sont persistés dans l'état moteur et migrés pour les sauvegardes v0.2-dev plus anciennes ; l'UI ne contient plus ces données en dur.
 - Écran téléphone : historique local consultable hors réseau si l'appareil est transporté et alimenté ; batterie et réseau affichés depuis l'état réel.
 - **Capacités téléphone dérivées par le moteur** : appel, SMS et data suivent batterie + seuils réseau v0.1.8 ; l'historique local reste indépendant du réseau.
+- **Météo du téléphone reconnectée** : l’écran lit directement la météo persistée du monde simulé et reste consultable hors réseau ; aucune donnée Internet n’est simulée comme étant réelle.
 - **Validation structurelle du téléphone sauvegardé** : appareil lié à un smartphone valide, identifiants d'historique uniques et signal mobile 0–100 ; une sauvegarde corrompue est récupérée proprement.
-- Smoke mobile couvrant l’ouverture du téléphone, les trois historiques de messages et les trois appels récents.
+- **Menu global remis au cahier des charges** : Accueil, Paramètres et À propos ; le réglage Son est persisté séparément de la sauvegarde de partie.
+- Smoke mobile couvrant l’ouverture du téléphone, les historiques locaux, la météo, le menu et la persistance du réglage Son.
 - CI reproductible : Node 22, `package-lock.json`, `npm ci`, TypeScript strict, ESLint, Vitest, build Vite et smoke Playwright mobile Pixel 7.
 
 ## À migrer avant promotion
 
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
-- Téléphone : actions sortantes appel/SMS et leurs résultats de gameplay ; écrans Météo et Réglages.
+- Téléphone : actions sortantes appel/SMS et leurs résultats de gameplay ; écran Réglages du téléphone si conservé dans la conception finale.
 - Carte Leaflet + fog of war géographique persistant.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
+- Unification thermique complète `world.weather` → environnement des lieux à traiter séparément afin de ne pas casser les régressions physiologie/périssables déjà validées.
 
 ## Décision UX qui remplace une règle historique
 
