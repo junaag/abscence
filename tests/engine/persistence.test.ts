@@ -5,8 +5,8 @@ import { createInitialState } from '../../src/engine/state';
 function memoryStorage(initial: string | null = null) {
   let value = initial;
   return {
-    getItem: (_key: string) => value,
-    setItem: (_key: string, next: string) => { value = next; },
+    getItem: () => value,
+    setItem: (...args: string[]) => { value = args[1] ?? null; },
     read: () => value,
   };
 }
