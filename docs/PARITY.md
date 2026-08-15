@@ -25,10 +25,12 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Lampe : 64 % initial, −0,02 % par usage, −0,25 %/min lorsqu'elle est allumée.
 - Source électrique générique et recharge selon disponibilité/tension actuelle.
 - **Interruption de recharge sur transition électrique** : une recharge longue s'arrête exactement à la coupure du réseau et conserve la charge réellement acquise jusque-là.
-- **Transitions d'infrastructure déterministes** pour eau, électricité et réseau mobile, avec instant exact et état persistant de traitement. Aucun planning de panne arbitraire n'est activé par défaut.
+- **Transitions d'infrastructure déterministes** pour eau, électricité et réseau mobile, avec instant exact et état persistant de traitement.
 - Fraîcheur persistante des périssables : pomme 94 % initial, base 0,2 point/h.
 - Courbe thermique historique de dégradation restaurée de ≤4 °C à >40 °C.
 - Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
+- **Règle réfrigérée v0.1.8 exacte** : lorsque le contrôle thermique est alimenté, le multiplicateur de dégradation vaut `min(courbe thermique, multiplicateur réfrigéré 0,25)` ; il n'est pas multiplié une seconde fois.
+- Régression historique couverte : pomme 94 % → 92,8 % après 24 h dans un réfrigérateur alimenté à 4 °C.
 - Température de stockage calculée depuis l'emplacement réel de l'objet.
 - **Effets persistants historiques restaurés** : eau au sol, fumée, feu et bruit continu avec intensité persistante, croissance/décroissance, propagation par connexions ouvertes, ventilation et fenêtre pour la fumée.
 - Impacts locaux des effets restaurés : stress, douleur et budget de dégâts PV pour fumée/feu dangereux.
@@ -40,12 +42,11 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 
 ## À migrer avant promotion
 
-- Multiplicateur réfrigéré historique additionnel `0,25` : valeur connue mais combinaison exacte avec la courbe thermique à revérifier dans la source historique avant activation.
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
 - Génération autonome/seedée des évolutions de réseaux au-delà des transitions déterministes déjà supportées par le moteur.
 - Événements autonomes procéduraux avec seed au-delà des trois événements historiques fixes déjà restaurés.
 - Perception auditive / visuelle / olfactive à distance.
-- Téléphone / messages.
+- Téléphone / messages pilotés par l'état moteur.
 - Carte Leaflet + fog of war géographique persistant.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
 
