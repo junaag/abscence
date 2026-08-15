@@ -13,7 +13,11 @@
   (0,eval)(await decodeGzipBase64(encoded));
   const fixResponse=await fetch('gameplay-graph-containers-v0111.js.gz.b64',{cache:'no-store'});if(!fixResponse.ok)throw new Error('gameplay fix');
   (0,eval)(await decodeGzipBase64(await fixResponse.text()));
+  const largeEngine=await fetch('large-containers-engine-v0111.js.gz.b64',{cache:'no-store'});if(!largeEngine.ok)throw new Error('large containers engine');
+  (0,eval)(await decodeGzipBase64(await largeEngine.text()));
   const appResponse=await fetch('app-v0111.js.gz.b64',{cache:'no-store'});if(!appResponse.ok)throw new Error('app');
   (0,eval)(await decodeGzipBase64(await appResponse.text()));
+  const largeUI=await fetch('large-containers-ui-v0111.js.gz.b64',{cache:'no-store'});if(!largeUI.ok)throw new Error('large containers ui');
+  (0,eval)(await decodeGzipBase64(await largeUI.text()));
 })().catch(err=>{console.error(err);document.getElementById('app').innerHTML='<main style="padding:16px"><div class="card"><b>Erreur de chargement</b><div class="copy">Le moteur v0.1.11 n’a pas pu être chargé.</div></div></main>'});
 </script></body></html>
