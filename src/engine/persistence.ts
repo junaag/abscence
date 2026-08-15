@@ -2,6 +2,7 @@ import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import { assertValidState, validateState } from './invariants';
 import type { GameState } from './model';
 import { ensurePhoneState } from './phone';
+import { assertValidPhoneState, validatePhoneState } from './phone-validation';
 import { createInitialState } from './state';
 
 export const SAVE_KEY = 'absence-v020-dev';
@@ -28,7 +29,7 @@ export function loadState(storage: ReadStorage): GameState {
     if (!isGameState(parsed)) return createInitialState();
     ensureAutonomousInfrastructureTransitions(parsed);
     ensurePhoneState(parsed);
-    return validateState(parsed).length === 0 ? parsed : createInitialState();
+    return validateState(parsed).length === 0 && validatePhoneState(parsed).length === 0 ? parsed : createInitialState();
   } catch {
     return createInitialState();
   }
@@ -36,5 +37,6 @@ export function loadState(storage: ReadStorage): GameState {
 
 export function saveState(state: GameState, storage: WriteStorage): void {
   assertValidState(state);
+  assertValidPhoneState(state);
   storage.setItem(SAVE_KEY, JSON.stringify(state));
 }
