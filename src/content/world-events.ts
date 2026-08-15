@@ -17,6 +17,16 @@ export interface WorldEventDefinition {
   tags: readonly string[];
 }
 
+const WATER_AVAILABLE: readonly WorldEventCondition[] = Object.freeze([
+  { type: 'infrastructure_available', systemType: 'water', zoneId: 'home' },
+]);
+
+const ELECTRICITY_AVAILABLE_20: readonly WorldEventCondition[] = Object.freeze([
+  { type: 'infrastructure_available', systemType: 'electricity', zoneId: 'home', minimumLevelPct: 20 },
+]);
+
+const NO_CONDITIONS: readonly WorldEventCondition[] = Object.freeze([]);
+
 export const WORLD_EVENT_DEFINITIONS: Readonly<Record<WorldEventDefinitionId, WorldEventDefinition>> = Object.freeze({
   water_leak: Object.freeze({
     id: 'water_leak',
@@ -26,7 +36,7 @@ export const WORLD_EVENT_DEFINITIONS: Readonly<Record<WorldEventDefinitionId, Wo
     defaultMaxDelaySeconds: 72 * 3600,
     defaultProbability: 0.45,
     sensory: Object.freeze({ audibleRangeM: 35, visibleRangeM: 12, smellRangeM: 0 }),
-    conditions: Object.freeze([{ type: 'infrastructure_available', systemType: 'water', zoneId: 'home' }]),
+    conditions: WATER_AVAILABLE,
     narrativeEvent: 'WORLD_WATER_LEAK',
     tags: Object.freeze(['water', 'leak', 'hazard']),
   }),
@@ -38,7 +48,7 @@ export const WORLD_EVENT_DEFINITIONS: Readonly<Record<WorldEventDefinitionId, Wo
     defaultMaxDelaySeconds: 24 * 3600,
     defaultProbability: 0.4,
     sensory: Object.freeze({ audibleRangeM: 600, visibleRangeM: 0, smellRangeM: 0 }),
-    conditions: Object.freeze([{ type: 'infrastructure_available', systemType: 'electricity', zoneId: 'home', minimumLevelPct: 20 }]),
+    conditions: ELECTRICITY_AVAILABLE_20,
     narrativeEvent: 'WORLD_SECURITY_ALARM',
     tags: Object.freeze(['alarm', 'noise']),
   }),
@@ -50,7 +60,7 @@ export const WORLD_EVENT_DEFINITIONS: Readonly<Record<WorldEventDefinitionId, Wo
     defaultMaxDelaySeconds: 72 * 3600,
     defaultProbability: 0.3,
     sensory: Object.freeze({ audibleRangeM: 80, visibleRangeM: 2000, smellRangeM: 250 }),
-    conditions: Object.freeze([]),
+    conditions: NO_CONDITIONS,
     narrativeEvent: 'WORLD_SMOKE_PLUME',
     tags: Object.freeze(['smoke', 'fire', 'hazard']),
   }),
@@ -62,7 +72,7 @@ export const WORLD_EVENT_DEFINITIONS: Readonly<Record<WorldEventDefinitionId, Wo
     defaultMaxDelaySeconds: 18 * 3600,
     defaultProbability: 0.75,
     sensory: Object.freeze({ audibleRangeM: 250, visibleRangeM: 80, smellRangeM: 0 }),
-    conditions: Object.freeze([]),
+    conditions: NO_CONDITIONS,
     narrativeEvent: 'WORLD_ANIMAL_ACTIVITY',
     tags: Object.freeze(['animal', 'noise']),
   }),
@@ -74,7 +84,7 @@ export const WORLD_EVENT_DEFINITIONS: Readonly<Record<WorldEventDefinitionId, Wo
     defaultMaxDelaySeconds: 12 * 3600,
     defaultProbability: 0.55,
     sensory: Object.freeze({ audibleRangeM: 180, visibleRangeM: 0, smellRangeM: 0 }),
-    conditions: Object.freeze([]),
+    conditions: NO_CONDITIONS,
     narrativeEvent: 'WORLD_UNATTENDED_NOISE',
     tags: Object.freeze(['noise', 'ambient']),
   }),

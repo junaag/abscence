@@ -125,8 +125,8 @@ export function getWorldEventPerception(
   observerLocationId: LocationId | null = null,
 ): WorldEventPerception | null {
   if (event.status !== 'active') return null;
-  const locationId = observerLocationId ?? state.player.locationId;
-  const distanceM = getDistanceMeters(state, locationId, event.locationId, event.position, null);
+  const observer = observerLocationId ?? state.player.locationId;
+  const distanceM = getDistanceMeters(state, observer, event.locationId, event.position, null);
   if (distanceM === null || !Number.isFinite(distanceM)) return null;
 
   const sensory = eventSensory(event);
@@ -144,15 +144,16 @@ export function getWorldEventPerception(
   }
 
   if (channels.length === 0) return null;
-  return {
+  const perception: WorldEventPerception = {
     eventId: event.id,
     definitionId: event.definitionId,
     narrativeEvent: event.narrativeEvent,
     distanceM: round(distanceM, 2),
     channels,
-    locationId: event.locationId,
     tags: [...event.tags],
   };
+  if (event.locationId) perception.locationId = event.locationId;
+  return perception;
 }
 
 export function getPerceivedWorldEvents(
