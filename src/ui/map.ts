@@ -1,5 +1,4 @@
 import * as L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { DEFAULT_HOME_COORDINATES, normalizeMapUiState, updateMapViewport, type ExploredMapArea, type MapUiState } from '../app/map-state';
 
 class FogCanvasLayer extends L.Layer {
