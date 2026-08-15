@@ -16,8 +16,12 @@
     "lint": "eslint src tests vite.config.ts playwright.config.ts",
     "ci": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
+  "dependencies": {
+    "leaflet": "1.9.4"
+  },
   "devDependencies": {
     "@playwright/test": "1.62.1",
+    "@types/leaflet": "1.9.21",
     "eslint": "9.39.5",
     "typescript": "6.0.3",
     "vite": "8.1.5",
