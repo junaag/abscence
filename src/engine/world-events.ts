@@ -1,5 +1,6 @@
 import { getWorldEventDefinition } from '../content/world-events';
 import { getMobileNetworkState } from './infrastructure';
+import { getWorldEventPerception, type WorldEventPerception } from './perception';
 import type {
   GameState,
   ProceduralWorldEventTransition,
@@ -250,6 +251,18 @@ function mergedSensory(definition: SensoryProfile, override: Partial<SensoryProf
   };
 }
 
+function attachStartPerception(
+  state: GameState,
+  event: WorldEventState,
+  transition: ProceduralWorldEventTransition,
+): void {
+  if (transition.type !== 'started') return;
+  const perception = getWorldEventPerception(state, event, state.player.locationId);
+  if (!perception) return;
+  event.discoveredByPlayer = true;
+  (transition as typeof transition & { perception: WorldEventPerception }).perception = perception;
+}
+
 function startWorldEventFromSource(state: GameState, source: WorldEventSourceState, triggerAtSeconds: number): ProceduralWorldEventTransition {
   const definition = getWorldEventDefinition(source.definitionId);
   const attemptIndex = source.attemptIndex;
@@ -301,6 +314,7 @@ function startWorldEventFromSource(state: GameState, source: WorldEventSourceSta
     worldElapsedSeconds: triggerAtSeconds,
   };
   state.world.eventHistory.push(started);
+  attachStartPerception(state, event, started);
   scheduleNextAttempt(state, source, triggerAtSeconds);
   return started;
 }
