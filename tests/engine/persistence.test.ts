@@ -12,7 +12,7 @@ function memoryStorage(initial: string | null = null) {
 }
 
 describe('versioned persistence', () => {
-  it('round-trips a valid state', () => {
+  it('round-trips a valid state through an injected storage adapter', () => {
     const storage = memoryStorage();
     const state = createInitialState();
     saveState(state, storage);

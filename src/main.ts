@@ -1,6 +1,8 @@
-import { loadState } from './engine';
+import { createBrowserPersistence } from './app/storage';
 import { mountApp } from './ui/render';
 
 const root = document.querySelector<HTMLElement>('#app');
 if (!root) throw new Error('Missing #app root');
-mountApp(root, loadState());
+
+const persistence = createBrowserPersistence(window.localStorage);
+mountApp(root, persistence.load(), { persist: (state) => persistence.save(state) });

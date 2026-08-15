@@ -11,12 +11,17 @@
 7. **`main` doit rester jouable.** Le développement se fait par branche et PR.
 8. **Une mécanique = spécification + tests moteur + intégration UI + smoke E2E.**
 9. **Les actions sont découpées par domaine.** Le dispatcher central route vers mouvement, contenants, objets et monde ; il ne contient pas les règles métier de ces domaines.
-10. **Les constantes de gameplay vérifiées vivent dans `rules.ts` ou dans les définitions de contenu**, pas au milieu des vues.
+10. **Le moteur est runtime-agnostique.** Il ne dépend ni du DOM, ni de `window`, ni de `localStorage`; ces dépendances sont injectées depuis `src/app`.
+11. **Les frontières d'import sont exécutables.** ESLint bloque moteur → UI et bloque l'UI qui contourne la façade publique du moteur.
 
 ## Flux
 
 ```text
-Interaction UI
+Browser adapters (storage, future map/network)
+   ↓
+Application
+   ↓
+UI interaction
    ↓
 GameAction
    ↓
@@ -24,13 +29,14 @@ performAction(state, action)
    ↓
 GameState suivant + ActionResult
    ↓
-persistence
+application persistence adapter
    ↓
 render(state)
 ```
 
 ## Découpage
 
+- `src/app` : composition des dépendances navigateur et orchestration.
 - `src/engine/actions/availability.ts` : déduction des actions disponibles.
 - `src/engine/actions/movement.ts` : déplacements et passages.
 - `src/engine/actions/containers.ts` : interactions de contenants.

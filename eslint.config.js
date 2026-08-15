@@ -9,8 +9,33 @@ export default tseslint.config(
     rules: {
       'no-console': ['error', { allow: ['warn', 'error'] }],
       'no-eval': 'error',
-      'no-implied-eval': 'error'
-    }
+      'no-implied-eval': 'error',
+    },
   },
-  { ignores: ['dist/**', 'coverage/**', 'playwright-report/**', 'test-results/**'] }
+  {
+    files: ['src/engine/**/*.ts'],
+    rules: {
+      'no-restricted-globals': ['error',
+        { name: 'window', message: 'The engine must stay runtime-agnostic.' },
+        { name: 'document', message: 'The engine must not depend on the DOM.' },
+        { name: 'localStorage', message: 'Inject a storage adapter instead.' },
+      ],
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['../ui/*', '../../ui/*', '../../../ui/*'], message: 'Engine modules cannot depend on UI modules.' },
+        ],
+      }],
+    },
+  },
+  {
+    files: ['src/ui/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [
+          { group: ['../engine/*', '../../engine/*'], message: 'UI code must use the public engine facade, not engine internals.' },
+        ],
+      }],
+    },
+  },
+  { ignores: ['dist/**', 'coverage/**', 'playwright-report/**', 'test-results/**'] },
 );
