@@ -19,6 +19,7 @@ export interface PowerSourceComponent {
 export interface PerishableComponent {
   initialFreshnessPercent: number;
   degradationPercentPerHourAmbient: number;
+  refrigeratedMultiplier?: number;
 }
 
 export interface ItemDefinition {
@@ -37,6 +38,7 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
     perishable: Object.freeze({
       initialFreshnessPercent: 94,
       degradationPercentPerHourAmbient: 0.2,
+      refrigeratedMultiplier: 0.25,
     }),
   }),
   smartphone: Object.freeze({

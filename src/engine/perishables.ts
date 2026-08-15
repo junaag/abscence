@@ -1,5 +1,5 @@
 import { getContainerDefinition } from '../content/containers';
-import { getItemDefinition } from '../content/items';
+import { getItemDefinition, type PerishableComponent } from '../content/items';
 import { isElectricityAvailable } from './infrastructure';
 import type { GameState, ItemState, LocationId } from './model';
 
@@ -8,6 +8,7 @@ export interface PerishableChange {
   fromFreshnessPercent: number;
   toFreshnessPercent: number;
   storageTemperatureC: number;
+  storageMultiplier: number;
 }
 
 function clamp(value: number, min = 0, max = 100): number {
@@ -32,8 +33,32 @@ export function temperatureSpoilageMultiplier(temperatureC: number): number {
   return Math.min(3, 2.4 + (temperature - 40) * 0.06);
 }
 
+/**
+ * Historical v0.1.8 combination rule: when refrigeration is actually powered,
+ * the perishable-specific refrigerated multiplier caps the thermal multiplier.
+ * It is a minimum, not a second multiplication.
+ */
+export function perishableSpoilageMultiplier(
+  temperatureC: number,
+  refrigeratedMultiplier: number | undefined,
+  refrigerationPowered: boolean,
+): number {
+  const thermal = temperatureSpoilageMultiplier(temperatureC);
+  if (!refrigerationPowered || !Number.isFinite(refrigeratedMultiplier)) return thermal;
+  return Math.min(thermal, Math.max(0, Number(refrigeratedMultiplier)));
+}
+
 function ambientTemperature(state: GameState, locationId: LocationId): number {
   return state.locations[locationId]?.ambientTemperatureC ?? 20;
+}
+
+function poweredContainerController(state: GameState, containerId: string): boolean {
+  const container = state.containers[containerId];
+  if (!container) return false;
+  const controller = getContainerDefinition(container.definitionId)?.environmentController;
+  if (!controller) return false;
+  const electricity = state.infrastructure.electricity;
+  return isElectricityAvailable(state) && electricity.voltagePercent >= controller.minimumVoltagePercent;
 }
 
 function containerTemperature(state: GameState, containerId: string): number | undefined {
@@ -41,9 +66,7 @@ function containerTemperature(state: GameState, containerId: string): number | u
   if (!container) return undefined;
   const ambient = ambientTemperature(state, container.locationId);
   const controller = getContainerDefinition(container.definitionId)?.environmentController;
-  if (!controller) return ambient;
-  const electricity = state.infrastructure.electricity;
-  if (!isElectricityAvailable(state) || electricity.voltagePercent < controller.minimumVoltagePercent) return ambient;
+  if (!controller || !poweredContainerController(state, containerId)) return ambient;
   return controller.targetTemperatureC;
 }
 
@@ -53,6 +76,11 @@ export function getItemStorageTemperatureC(state: GameState, itemOrId: ItemState
   if (item.location.kind === 'location') return ambientTemperature(state, item.location.id);
   if (item.location.kind === 'inventory') return ambientTemperature(state, state.player.locationId);
   return containerTemperature(state, item.location.id);
+}
+
+function itemStorageMultiplier(state: GameState, item: ItemState, perishable: PerishableComponent, temperatureC: number): number {
+  const refrigerationPowered = item.location.kind === 'container' && poweredContainerController(state, item.location.id);
+  return perishableSpoilageMultiplier(temperatureC, perishable.refrigeratedMultiplier, refrigerationPowered);
 }
 
 export function advancePerishables(state: GameState, seconds: number): PerishableChange[] {
@@ -68,11 +96,18 @@ export function advancePerishables(state: GameState, seconds: number): Perishabl
     if (temperature === undefined) continue;
 
     const before = clamp(item.freshnessPercent ?? perishable.initialFreshnessPercent);
-    const loss = perishable.degradationPercentPerHourAmbient * temperatureSpoilageMultiplier(temperature) * elapsedHours;
+    const storageMultiplier = itemStorageMultiplier(state, item, perishable, temperature);
+    const loss = perishable.degradationPercentPerHourAmbient * storageMultiplier * elapsedHours;
     const after = round(clamp(before - loss), 6);
     item.freshnessPercent = after;
     if (after !== before) {
-      changes.push({ itemId: item.id, fromFreshnessPercent: before, toFreshnessPercent: after, storageTemperatureC: temperature });
+      changes.push({
+        itemId: item.id,
+        fromFreshnessPercent: before,
+        toFreshnessPercent: after,
+        storageTemperatureC: temperature,
+        storageMultiplier: round(storageMultiplier, 4),
+      });
     }
   }
   return changes;

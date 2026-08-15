@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { advancePerishables, getItemStorageTemperatureC, temperatureSpoilageMultiplier } from '../../src/engine/perishables';
+import {
+  advancePerishables,
+  getItemStorageTemperatureC,
+  perishableSpoilageMultiplier,
+  temperatureSpoilageMultiplier,
+} from '../../src/engine/perishables';
 import { createInitialState } from '../../src/engine/state';
 
 function putAppleInFridge() {
@@ -22,27 +27,42 @@ describe('perishable storage', () => {
     expect(temperatureSpoilageMultiplier(50)).toBeCloseTo(3, 6);
   });
 
+  it('uses the historical refrigerator rule as min(thermal multiplier, refrigerated multiplier)', () => {
+    expect(perishableSpoilageMultiplier(10, 0.25, true)).toBeCloseTo(0.25, 6);
+    expect(perishableSpoilageMultiplier(10, 0.25, false)).toBeCloseTo(0.45, 6);
+    expect(perishableSpoilageMultiplier(4, 0.25, true)).toBeCloseTo(0.25, 6);
+  });
+
   it('starts the apple at the historical 94% freshness and loses 0.2 point per hour at 20C', () => {
     const state = createInitialState();
     expect(state.items.apple_01?.freshnessPercent).toBe(94);
     const changes = advancePerishables(state, 3600);
     expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.8, 6);
     expect(changes[0]?.storageTemperatureC).toBe(20);
+    expect(changes[0]?.storageMultiplier).toBe(1);
   });
 
-  it('uses the powered refrigerator target of 4C at sufficient voltage', () => {
+  it('uses the powered refrigerator target of 4C and historical 0.25 cap', () => {
     const state = putAppleInFridge();
     expect(getItemStorageTemperatureC(state, 'apple_01')).toBe(4);
-    advancePerishables(state, 3600);
+    const changes = advancePerishables(state, 3600);
     expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.95, 6);
+    expect(changes[0]?.storageMultiplier).toBe(0.25);
+  });
+
+  it('matches the v0.1.8 24-hour refrigerated apple regression', () => {
+    const state = putAppleInFridge();
+    advancePerishables(state, 24 * 3600);
+    expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(92.8, 6);
   });
 
   it('falls back to room temperature when refrigerator voltage is below 70%', () => {
     const state = putAppleInFridge();
     state.infrastructure.electricity.voltagePercent = 69;
     expect(getItemStorageTemperatureC(state, 'apple_01')).toBe(20);
-    advancePerishables(state, 3600);
+    const changes = advancePerishables(state, 3600);
     expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.8, 6);
+    expect(changes[0]?.storageMultiplier).toBe(1);
   });
 
   it('falls back to room temperature when electricity is unavailable', () => {
