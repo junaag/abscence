@@ -74,3 +74,22 @@ test('hamburger menu exposes home settings about and persists sound preference',
   await expect(page.getByText('ABSENCE · v0.2.0-dev')).toBeVisible();
   await expect(page.getByText('Création : Julien Imbert.')).toBeVisible();
 });
+
+test('map mounts Leaflet with textured fog and preserves one map host across navigation', async ({ page }) => {
+  await page.getByRole('button', { name: /Carte/ }).click();
+  const map = page.getByTestId('leaflet-map');
+  await expect(map).toBeVisible();
+  await expect(page.getByTestId('map-fog')).toBeVisible();
+  await expect(page.locator('.leaflet-container')).toHaveCount(1);
+  await expect(page.locator('.absence-home-marker')).toBeVisible();
+  await map.evaluate((element) => element.setAttribute('data-instance-token', 'persistent-map'));
+
+  await page.locator('.absence-home-marker').click();
+  await expect(page.getByRole('button', { name: 'Revenir à la maison' })).toBeVisible();
+  await page.getByRole('button', { name: 'Revenir à la maison' }).click();
+  await expect(page.getByTestId('home-view')).toBeVisible();
+
+  await page.getByRole('button', { name: /Carte/ }).click();
+  await expect(page.getByTestId('leaflet-map')).toHaveAttribute('data-instance-token', 'persistent-map');
+  await expect(page.locator('.leaflet-container')).toHaveCount(1);
+});

@@ -9,4 +9,6 @@ mountApp(root, persistence.load(), {
   persist: (state) => persistence.save(state),
   preferences: persistence.loadPreferences(),
   persistPreferences: (preferences) => persistence.savePreferences(preferences),
+  mapState: persistence.loadMapState(),
+  persistMapState: (mapState) => persistence.saveMapState(mapState),
 });
