@@ -8,6 +8,7 @@ export {
   containerContents,
   containersAtCurrentLocation,
   currentLocation,
+  describeItemExamination,
   formatClock,
   getContainerActions,
   getContextActions,
