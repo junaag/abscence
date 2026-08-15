@@ -11,6 +11,9 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Mort logique à 0 PV.
 - **Modificateurs physiologiques chaleur/humidité historiques restaurés** : soif accélérée au-delà de 26 °C, supplément humidité à partir de 28 °C et >60 %, fatigue accélérée au-delà de 30 °C, avec caps historiques.
 - Les dégâts critiques utilisent le taux de soif environnemental effectif, donc la chaleur peut faire franchir les seuils de danger plus tôt.
+- **Unification thermique historique restaurée** : la météo mondiale est la source extérieure ; un lieu extérieur utilise directement sa température, un intérieur sans réglage dédié utilise `extérieur −2 °C`, et un lieu peut imposer une température fixe ou un offset intérieur spécifique.
+- **Environnement joueur canonique** : température du lieu + humidité/condition/vent de la météo mondiale ; physiologie et conservation alimentaire consomment désormais les mêmes sélecteurs thermiques.
+- Les anciennes sauvegardes v0.2-dev sans métadonnées d'environnement de lieu sont normalisées automatiquement au chargement.
 - Graphe de lieux canonique ; connexions avec `open`, `locked`, `openSeconds`, `travelSeconds`.
 - Inventaire et emplacement persistant unique des objets.
 - Pomme : faim −9, soif −4, durée 120 s.
@@ -20,6 +23,8 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Examiner est informatif et n'est pas un verrou d'utilisation.
 - Narratif de lieu dérivé de l'état réel.
 - Sauvegarde v0.2.0 isolée, versionnée et validée par invariants.
+- **Migration contrôlée v0.1.11 → v0.2 restaurée et testée contre le vrai moteur historique compressé du dépôt** : priorité à `absence-preview-v0111`, repli `absence-preview-v019`, et priorité absolue à une sauvegarde v0.2 valide existante.
+- La migration v0.1.11 conserve les données reconnues : PV/besoins, emplacement, inventaire, pomme consommée, alias historique `water_bottle_01` / `water_bottle_500` vers `water_01`, quantité de liquide, batterie/fraîcheur si présentes, réseaux, météo, effets et mémoire ; les champs inconnus sont ignorés plutôt que d'invalider le nouvel état.
 - Batteries génériques : charge persistante, coût d'usage, drain passif, extinction à 0 %.
 - Téléphone : 78 % initial, −0,03 % par usage, recharge 2 %/min.
 - Lampe : 64 % initial, −0,02 % par usage, −0,25 %/min lorsqu'elle est allumée.
@@ -32,7 +37,7 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Normalisation météo historique restaurée : température bornée −30…55 °C, humidité 0…100 %, vent et précipitations non négatifs ; migration automatique des sauvegardes v0.2-dev sans météo.
 - Fraîcheur persistante des périssables : pomme 94 % initial, base 0,2 point/h.
 - Courbe thermique historique de dégradation restaurée de ≤4 °C à >40 °C.
-- Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
+- Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température réelle du lieu dérivée de la météo/environnement.
 - **Règle réfrigérée v0.1.8 exacte** : lorsque le contrôle thermique est alimenté, le multiplicateur de dégradation vaut `min(courbe thermique, multiplicateur réfrigéré 0,25)` ; il n'est pas multiplié une seconde fois.
 - Régression historique couverte : pomme 94 % → 92,8 % après 24 h dans un réfrigérateur alimenté à 4 °C.
 - Température de stockage calculée depuis l'emplacement réel de l'objet.
@@ -72,8 +77,6 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Exploration géographique réelle** : le fog sait persister des zones explorées, mais le déplacement actuel du gameplay reste un graphe intérieur abstrait ; il faut encore relier les futurs déplacements extérieurs aux zones/corridors explorés.
 - **Position Maison exacte** : `[43.4053, 5.0548]` reste une approximation du secteur de départ et ne doit pas être considérée comme la coordonnée exacte du domicile.
 - Annotations cartographiques au stylet si cette mécanique est conservée ; elles devront rester manuelles et ne jamais révéler les états internes des lieux.
-- Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
-- Unification thermique complète `world.weather` → environnement des lieux à traiter séparément afin de ne pas casser les régressions physiologie/périssables déjà validées.
 
 ## Décision UX qui remplace une règle historique
 
