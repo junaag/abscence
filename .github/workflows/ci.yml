@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7.0.1
       - uses: actions/setup-node@v6.4.0
@@ -19,13 +24,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - run: npm run integrity
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
-      - run: npm run build
+      - run: npm run build:bundle
 
   e2e-mobile:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: quality
     steps:
       - uses: actions/checkout@v7.0.1
