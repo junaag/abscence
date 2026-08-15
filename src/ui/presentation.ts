@@ -2,6 +2,7 @@ import {
   containerContents,
   containersAtCurrentLocation,
   currentLocation,
+  describeItemExamination,
   formatClock,
   getContainerActions,
   getContextActions,
@@ -317,13 +318,8 @@ export function renderTargetPopup(state: GameState, ui: UiState): string {
   if (!item) return '';
   const actions = getItemActions(state, item.id);
   const details = item.examined
-    ? [
-        item.condition ? `État : ${item.condition}` : '',
-        item.freshnessPercent !== undefined ? `Fraîcheur : ${item.freshnessPercent.toFixed(1)} %` : '',
-        item.capacityMl !== undefined ? `Contenu : ${item.liquidMl ?? 0}/${item.capacityMl} ml` : '',
-        item.batteryPercent !== undefined ? `Batterie : ${item.batteryPercent.toFixed(1)} %` : '',
-      ].filter(Boolean).join(' · ')
-    : 'Touchez « Examiner » pour obtenir davantage d’informations.';
+    ? describeItemExamination(state, item.id)
+    : 'Touchez « Examiner » pour découvrir son rôle, son fonctionnement et son état.';
 
   return `
     <div class="overlay">
@@ -331,7 +327,7 @@ export function renderTargetPopup(state: GameState, ui: UiState): string {
         <div class="sheet-head">
           <div>
             <div class="sheet-title">${escapeHtml(item.name)}</div>
-            <div class="sheet-sub">${escapeHtml(details)}</div>
+            <div class="sheet-sub" data-testid="item-examination">${escapeHtml(details)}</div>
           </div>
           <button type="button" class="close" data-close-popup>×</button>
         </div>
