@@ -1,15 +1,11 @@
 import { GAME_VERSION, SAVE_SCHEMA_VERSION } from '../version';
-import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
-import { assertValidState, validateState } from './invariants';
+import { assertValidState } from './invariants';
 import { loadLegacyPreviewMigration } from './legacy-migration';
-import { ensureLocationEnvironmentState } from './location-environment';
-import { assertValidLocationEnvironmentState, validateLocationEnvironmentState } from './location-environment-validation';
+import { assertValidLocationEnvironmentState } from './location-environment-validation';
 import type { GameState } from './model';
-import { ensurePhoneState } from './phone';
-import { assertValidPhoneState, validatePhoneState } from './phone-validation';
+import { assertValidPhoneState } from './phone-validation';
+import { normalizePersistedGameState } from './save-normalization';
 import { createInitialState } from './state';
-import { ensureWeatherState } from './weather';
-import { ensureWorldEventSimulationState } from './world-events';
 
 export const SAVE_KEY = 'absence-v020-dev';
 
@@ -21,18 +17,6 @@ export interface WriteStorage {
   setItem(key: string, value: string): void;
 }
 
-function isCompatibleGameState(value: unknown): value is GameState {
-  if (!value || typeof value !== 'object') return false;
-  const state = value as Partial<GameState>;
-  return state.schemaVersion === SAVE_SCHEMA_VERSION
-    && typeof state.gameVersion === 'string'
-    && Boolean(state.player)
-    && Boolean(state.locations)
-    && Boolean(state.connections)
-    && Boolean(state.containers)
-    && Boolean(state.items);
-}
-
 export function loadState(storage: ReadStorage): GameState {
   const raw = storage.getItem(SAVE_KEY);
   if (!raw) {
@@ -41,18 +25,7 @@ export function loadState(storage: ReadStorage): GameState {
   }
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!isCompatibleGameState(parsed)) return createInitialState();
-    if (validateLocationEnvironmentState(parsed).length > 0) return createInitialState();
-    ensureAutonomousInfrastructureTransitions(parsed);
-    ensureWorldEventSimulationState(parsed);
-    ensureWeatherState(parsed);
-    ensureLocationEnvironmentState(parsed);
-    ensurePhoneState(parsed);
-    if (validateState(parsed).length > 0
-      || validateLocationEnvironmentState(parsed).length > 0
-      || validatePhoneState(parsed).length > 0) return createInitialState();
-    parsed.gameVersion = GAME_VERSION;
-    return parsed;
+    return normalizePersistedGameState(parsed) ?? createInitialState();
   } catch {
     return createInitialState();
   }
