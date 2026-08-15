@@ -1,3 +1,5 @@
+import type { SAVE_SCHEMA_VERSION } from '../version';
+
 export type LocationId = string;
 export type ConnectionId = string;
 export type ContainerId = string;
@@ -86,24 +88,44 @@ export interface ItemState {
   name: string;
   location: ItemLocation;
   examined: boolean;
+  condition?: string;
   liquidMl?: number;
   capacityMl?: number;
   batteryPercent?: number;
-  freshnessPercent?: number;
   enabled?: boolean;
-  condition?: string;
+  freshnessPercent?: number;
 }
 
-export type InfrastructureTransitionState =
-  | { id: string; network: 'electricity'; atSeconds: number; processed: boolean; available: boolean; voltagePercent?: number }
-  | { id: string; network: 'water'; atSeconds: number; processed: boolean; available: boolean; pressure?: number }
-  | { id: string; network: 'mobile'; atSeconds: number; processed: boolean; available: boolean; signal?: number; signalPercent?: number };
+export interface InfrastructureTransitionState {
+  id: string;
+  network: 'electricity' | 'water' | 'mobile';
+  atSeconds: number;
+  processed: boolean;
+  phase?: 'on' | 'unstable' | 'off';
+  available?: boolean;
+  voltagePercent?: number;
+  pressurePercent?: number;
+  signalPercent?: number;
+}
 
 export interface InfrastructureState {
-  water: { available: boolean; pressure: number };
-  electricity: { available: boolean; voltagePercent: number };
-  mobile: { available: boolean; signal: number; signalPercent?: number };
-  transitions?: InfrastructureTransitionState[];
+  electricity: {
+    phase?: 'on' | 'unstable' | 'off';
+    available: boolean;
+    voltagePercent: number;
+  };
+  water: {
+    phase?: 'on' | 'unstable' | 'off';
+    available: boolean;
+    pressurePercent: number;
+  };
+  mobile: {
+    phase?: 'on' | 'unstable' | 'off';
+    available: boolean;
+    signalBars: number;
+    signalPercent?: number;
+  };
+  transitions: InfrastructureTransitionState[];
 }
 
 export type PersistentEffectType = 'water_puddle' | 'smoke' | 'fire' | 'persistent_noise';
@@ -114,103 +136,75 @@ export interface PersistentEffect {
   locationId: LocationId;
   intensity: number;
   active: boolean;
-  source?: string;
   spreading: boolean;
   createdAtSeconds: number;
   updatedAtSeconds: number;
-  resolvedAtSeconds?: number;
-  resolutionReason?: string;
+  sourceLocationId?: LocationId;
 }
 
-export type ScheduledWorldEventType = 'noise_source' | 'water_leak' | 'smoke';
-
-export interface ScheduledWorldEvent {
-  id: string;
-  atSeconds: number;
-  type: ScheduledWorldEventType;
-  locationId: LocationId;
-  processed: boolean;
-}
-
-export interface WorldEventRecord {
-  id: string;
-  type: 'WORLD_PERSISTENT_NOISE' | 'WORLD_WATER_LEAK' | 'WORLD_SMOKE';
-  locationId: LocationId;
-  atSeconds: number;
-}
-
-export type WorldEventDefinitionId = 'water_leak' | 'security_alarm' | 'smoke_plume' | 'animal_noise' | 'unattended_noise';
-export type WorldEventCategory = 'hazard' | 'signal' | 'life' | 'ambient';
+export type WorldEventDefinitionId = 'water_leak' | 'alarm' | 'smoke_plume' | 'animal_activity' | 'isolated_noise';
 
 export interface SensoryProfile {
-  audibleRangeM: number;
-  visibleRangeM: number;
-  smellRangeM: number;
+  audibleRangeMeters?: number;
+  visibleRangeMeters?: number;
+  smellRangeMeters?: number;
 }
 
-export type WorldEventSourceCondition =
-  | { type: 'infrastructure_available'; systemType: 'water' | 'electricity' | 'mobile'; zoneId?: string; minimumLevelPct?: number }
-  | { type: 'infrastructure_status'; systemType: 'water' | 'electricity' | 'mobile'; zoneId?: string; status?: 'on' | 'unstable' | 'off'; statuses?: Array<'on' | 'unstable' | 'off'> }
-  | { type: 'location_exists'; locationId?: LocationId };
+export interface ProceduralWorldEventTransition {
+  id: string;
+  sourceId: string;
+  atSeconds: number;
+  kind: 'attempt' | 'resolve';
+  processed: boolean;
+}
 
 export interface WorldEventSourceState {
   id: string;
   definitionId: WorldEventDefinitionId;
-  locationId: LocationId | null;
-  position: WorldPosition | null;
+  locationId: LocationId;
   enabled: boolean;
-  autonomous: boolean;
   probability: number;
-  minDelaySeconds: number;
-  maxDelaySeconds: number;
-  cooldownMinSeconds: number;
-  cooldownMaxSeconds: number;
+  minIntervalSeconds: number;
+  maxIntervalSeconds: number;
   durationSeconds: number;
-  maxOccurrences: number;
-  maxAttempts: number;
-  attemptIndex: number;
-  occurrenceCount: number;
-  scheduleBaseAtSeconds: number | null;
-  nextTriggerAtSeconds: number | null;
-  conditions: WorldEventSourceCondition[] | null;
-  sensory: Partial<SensoryProfile> | null;
-  metadata: Record<string, unknown>;
-  infrastructureZoneId?: string;
+  maxOccurrences?: number;
+  attempts: number;
+  occurrences: number;
+  nextAttemptAtSeconds?: number;
+  conditions?: {
+    requireElectricity?: boolean;
+    requireWater?: boolean;
+    requireMobile?: boolean;
+  };
 }
 
 export interface WorldEventState {
   id: string;
+  sourceId: string;
   definitionId: WorldEventDefinitionId;
-  sourceId?: string;
-  category?: WorldEventCategory;
-  status: 'active' | 'resolved';
-  locationId?: LocationId;
-  position?: WorldPosition;
-  sensory?: SensoryProfile;
-  narrativeEvent: string;
-  tags: string[];
-  metadata?: Record<string, unknown>;
-  discoveredByPlayer: boolean;
+  locationId: LocationId;
   startedAtSeconds: number;
-  endsAtSeconds?: number;
+  endsAtSeconds: number;
+  active: boolean;
+  discovered: boolean;
   resolvedAtSeconds?: number;
 }
 
-export type ProceduralWorldEventTransition =
-  | { type: 'skipped'; sourceId: string; definitionId: WorldEventDefinitionId; worldElapsedSeconds: number; reason: 'PROBABILITY' | 'CONDITIONS'; probabilityRoll: number }
-  | { type: 'started'; eventId: string; event: WorldEventState; worldElapsedSeconds: number }
-  | { type: 'resolved'; eventId: string; definitionId: WorldEventDefinitionId; sourceId: string; worldElapsedSeconds: number };
-
-export type WorldHistoryRecord = WorldEventRecord | ProceduralWorldEventTransition;
-
 export interface WorldState {
-  effects: PersistentEffect[];
-  windowsOpen: Record<LocationId, boolean>;
   leakActive: boolean;
-  scheduledEvents: ScheduledWorldEvent[];
-  eventHistory: WorldHistoryRecord[];
+  windowOpenByLocation: Record<LocationId, boolean>;
+  effects: PersistentEffect[];
   eventSources?: Record<string, WorldEventSourceState>;
   events?: WorldEventState[];
+  eventTransitions?: ProceduralWorldEventTransition[];
+  eventHistory?: Array<{
+    eventId: string;
+    sourceId: string;
+    definitionId: WorldEventDefinitionId;
+    locationId: LocationId;
+    startedAtSeconds: number;
+    resolvedAtSeconds?: number;
+  }>;
 }
 
 export interface PhoneCallRecord {
@@ -240,8 +234,8 @@ export interface MemoryState {
 }
 
 export interface GameState {
-  schemaVersion: 1;
-  gameVersion: '0.2.0-dev';
+  schemaVersion: typeof SAVE_SCHEMA_VERSION;
+  gameVersion: string;
   clock: WorldClock;
   engine: EngineSimulationState;
   player: PlayerState;
