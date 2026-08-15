@@ -4,6 +4,7 @@ import type { GameState } from './model';
 import { ensurePhoneState } from './phone';
 import { assertValidPhoneState, validatePhoneState } from './phone-validation';
 import { createInitialState } from './state';
+import { ensureWorldEventSimulationState } from './world-events';
 
 export const SAVE_KEY = 'absence-v020-dev';
 
@@ -28,6 +29,7 @@ export function loadState(storage: ReadStorage): GameState {
     const parsed: unknown = JSON.parse(raw);
     if (!isGameState(parsed)) return createInitialState();
     ensureAutonomousInfrastructureTransitions(parsed);
+    ensureWorldEventSimulationState(parsed);
     ensurePhoneState(parsed);
     return validateState(parsed).length === 0 && validatePhoneState(parsed).length === 0 ? parsed : createInitialState();
   } catch {

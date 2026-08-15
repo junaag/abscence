@@ -1,10 +1,12 @@
 import { getContainerDefinition } from '../content/containers';
 import { getItemDefinition } from '../content/items';
-import type { GameState, NeedsState } from './model';
+import { WORLD_EVENT_DEFINITIONS } from '../content/world-events';
+import type { GameState, NeedsState, WorldEventRecord } from './model';
 
 export interface InvariantViolation { code: string; message: string; }
 function violation(code: string, message: string): InvariantViolation { return { code, message }; }
 function isPercent(value: number): boolean { return Number.isFinite(value) && value >= 0 && value <= 100; }
+function isFixedWorldRecord(value: GameState['world']['eventHistory'][number]): value is WorldEventRecord { return 'id' in value && 'atSeconds' in value; }
 
 export function validateState(state: GameState): InvariantViolation[] {
   const errors: InvariantViolation[] = [];
@@ -13,6 +15,7 @@ export function validateState(state: GameState): InvariantViolation[] {
   if (!Number.isFinite(state.engine.damageBudgetPv) || state.engine.damageBudgetPv < 0 || state.engine.damageBudgetPv >= 1) errors.push(violation('DAMAGE_BUDGET_INVALID', `Fractional PV damage budget must stay in [0, 1), got ${state.engine.damageBudgetPv}.`));
   if (!Number.isFinite(state.engine.elapsedSeconds) || state.engine.elapsedSeconds < 0) errors.push(violation('ENGINE_TIME_INVALID', `Engine elapsed time must be non-negative, got ${state.engine.elapsedSeconds}.`));
   if (!Number.isInteger(state.engine.nextEffectId) || state.engine.nextEffectId < 1) errors.push(violation('NEXT_EFFECT_ID_INVALID', `nextEffectId must be a positive integer, got ${state.engine.nextEffectId}.`));
+  if (state.engine.worldEventSeed !== undefined && !Number.isFinite(state.engine.worldEventSeed)) errors.push(violation('WORLD_EVENT_SEED_INVALID', 'World event seed must be finite.'));
   for (const [key, value] of Object.entries(state.player.needs) as Array<[keyof NeedsState, number]>) if (!isPercent(value)) errors.push(violation('NEED_OUT_OF_RANGE', `${key} must stay between 0 and 100, got ${value}.`));
   if (!isPercent(state.infrastructure.water.pressure * 100)) errors.push(violation('WATER_PRESSURE_INVALID', 'Water pressure must stay between 0 and 1.'));
   if (!isPercent(state.infrastructure.electricity.voltagePercent)) errors.push(violation('VOLTAGE_INVALID', 'Electricity voltage must stay between 0 and 100 %.'));
@@ -64,12 +67,44 @@ export function validateState(state: GameState): InvariantViolation[] {
     if (event.processed && event.atSeconds > state.engine.elapsedSeconds) errors.push(violation('SCHEDULED_EVENT_PROCESSED_EARLY', `${event.id} is marked processed before its scheduled time.`));
   }
 
-  const worldEventIds = new Set<string>();
+  for (const [sourceKey, source] of Object.entries(state.world.eventSources ?? {})) {
+    if (sourceKey !== source.id) errors.push(violation('WORLD_EVENT_SOURCE_KEY_MISMATCH', `${sourceKey} contains source ${source.id}.`));
+    if (!WORLD_EVENT_DEFINITIONS[source.definitionId]) errors.push(violation('WORLD_EVENT_SOURCE_DEFINITION_INVALID', `${source.id} uses unknown definition ${source.definitionId}.`));
+    if (source.locationId && !state.locations[source.locationId]) errors.push(violation('WORLD_EVENT_SOURCE_LOCATION_MISSING', `${source.id} points to missing location ${source.locationId}.`));
+    if (!Number.isFinite(source.probability) || source.probability < 0 || source.probability > 1) errors.push(violation('WORLD_EVENT_SOURCE_PROBABILITY_INVALID', `${source.id} has invalid probability.`));
+    for (const [field, value] of [['minDelaySeconds', source.minDelaySeconds], ['maxDelaySeconds', source.maxDelaySeconds], ['cooldownMinSeconds', source.cooldownMinSeconds], ['cooldownMaxSeconds', source.cooldownMaxSeconds], ['durationSeconds', source.durationSeconds]] as const) {
+      if (!Number.isFinite(value) || value < 0) errors.push(violation('WORLD_EVENT_SOURCE_DURATION_INVALID', `${source.id}.${field} must be non-negative.`));
+    }
+    if (!Number.isInteger(source.maxOccurrences) || source.maxOccurrences < 1) errors.push(violation('WORLD_EVENT_SOURCE_OCCURRENCES_INVALID', `${source.id} has invalid maxOccurrences.`));
+    if (!Number.isInteger(source.maxAttempts) || source.maxAttempts < source.maxOccurrences) errors.push(violation('WORLD_EVENT_SOURCE_ATTEMPTS_INVALID', `${source.id} has invalid maxAttempts.`));
+    if (!Number.isInteger(source.attemptIndex) || source.attemptIndex < 0 || source.attemptIndex > source.maxAttempts) errors.push(violation('WORLD_EVENT_SOURCE_ATTEMPT_INDEX_INVALID', `${source.id} has invalid attemptIndex.`));
+    if (!Number.isInteger(source.occurrenceCount) || source.occurrenceCount < 0 || source.occurrenceCount > source.maxOccurrences) errors.push(violation('WORLD_EVENT_SOURCE_OCCURRENCE_COUNT_INVALID', `${source.id} has invalid occurrenceCount.`));
+    if (source.scheduleBaseAtSeconds !== null && (!Number.isFinite(source.scheduleBaseAtSeconds) || source.scheduleBaseAtSeconds < 0)) errors.push(violation('WORLD_EVENT_SOURCE_BASE_TIME_INVALID', `${source.id} has invalid schedule base.`));
+    if (source.nextTriggerAtSeconds !== null && (!Number.isFinite(source.nextTriggerAtSeconds) || source.nextTriggerAtSeconds < 0)) errors.push(violation('WORLD_EVENT_SOURCE_TRIGGER_TIME_INVALID', `${source.id} has invalid next trigger.`));
+  }
+
+  const autonomousEventIds = new Set<string>();
+  for (const event of state.world.events ?? []) {
+    if (autonomousEventIds.has(event.id)) errors.push(violation('AUTONOMOUS_EVENT_DUPLICATE_ID', `Autonomous event id ${event.id} is duplicated.`));
+    autonomousEventIds.add(event.id);
+    if (!WORLD_EVENT_DEFINITIONS[event.definitionId]) errors.push(violation('AUTONOMOUS_EVENT_DEFINITION_INVALID', `${event.id} uses unknown definition ${event.definitionId}.`));
+    if (event.locationId && !state.locations[event.locationId]) errors.push(violation('AUTONOMOUS_EVENT_LOCATION_MISSING', `${event.id} points to missing location ${event.locationId}.`));
+    if (!Number.isFinite(event.startedAtSeconds) || event.startedAtSeconds < 0 || event.startedAtSeconds > state.engine.elapsedSeconds) errors.push(violation('AUTONOMOUS_EVENT_START_INVALID', `${event.id} has invalid start time.`));
+    if (event.endsAtSeconds !== undefined && (!Number.isFinite(event.endsAtSeconds) || event.endsAtSeconds < event.startedAtSeconds)) errors.push(violation('AUTONOMOUS_EVENT_END_INVALID', `${event.id} has invalid end time.`));
+    if (event.status === 'resolved' && (event.resolvedAtSeconds === undefined || !Number.isFinite(event.resolvedAtSeconds) || event.resolvedAtSeconds < event.startedAtSeconds || event.resolvedAtSeconds > state.engine.elapsedSeconds)) errors.push(violation('AUTONOMOUS_EVENT_RESOLUTION_INVALID', `${event.id} has invalid resolution time.`));
+  }
+
+  const fixedWorldEventIds = new Set<string>();
   for (const event of state.world.eventHistory) {
-    if (worldEventIds.has(event.id)) errors.push(violation('WORLD_EVENT_DUPLICATE_ID', `World event id ${event.id} is duplicated.`));
-    worldEventIds.add(event.id);
-    if (!state.locations[event.locationId]) errors.push(violation('WORLD_EVENT_LOCATION_MISSING', `${event.id} points to missing location ${event.locationId}.`));
-    if (!Number.isFinite(event.atSeconds) || event.atSeconds < 0 || event.atSeconds > state.engine.elapsedSeconds) errors.push(violation('WORLD_EVENT_TIME_INVALID', `${event.id} has invalid atSeconds.`));
+    if (isFixedWorldRecord(event)) {
+      if (fixedWorldEventIds.has(event.id)) errors.push(violation('WORLD_EVENT_DUPLICATE_ID', `World event id ${event.id} is duplicated.`));
+      fixedWorldEventIds.add(event.id);
+      if (!state.locations[event.locationId]) errors.push(violation('WORLD_EVENT_LOCATION_MISSING', `${event.id} points to missing location ${event.locationId}.`));
+      if (!Number.isFinite(event.atSeconds) || event.atSeconds < 0 || event.atSeconds > state.engine.elapsedSeconds) errors.push(violation('WORLD_EVENT_TIME_INVALID', `${event.id} has invalid atSeconds.`));
+      continue;
+    }
+    if (!Number.isFinite(event.worldElapsedSeconds) || event.worldElapsedSeconds < 0 || event.worldElapsedSeconds > state.engine.elapsedSeconds) errors.push(violation('PROCEDURAL_EVENT_HISTORY_TIME_INVALID', `Procedural event history has invalid time ${event.worldElapsedSeconds}.`));
+    if (event.type === 'started' && event.event.id !== event.eventId) errors.push(violation('PROCEDURAL_EVENT_HISTORY_ID_MISMATCH', `Started event ${event.eventId} contains mismatched event data.`));
   }
 
   for (const locationId of Object.keys(state.world.windowsOpen)) if (!state.locations[locationId]) errors.push(violation('WINDOW_LOCATION_MISSING', `Window state points to missing location ${locationId}.`));

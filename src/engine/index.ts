@@ -9,7 +9,9 @@ export { environmentPhysiologyModifiers, effectivePhysiologyRates } from './phys
 export { connectedDestinations, containerContents, containersAtCurrentLocation, currentLocation, inventoryItems, looseItemsAtCurrentLocation } from './selectors';
 export { createInitialState } from './state';
 export { formatClock } from './time';
+export { addWorldEventSource, applyDueWorldEventTransitions, createWorldEventSource, deterministicWorldEventUnit, ensureWorldEventSimulationState, getNextWorldEventBoundary, secondsUntilNextWorldEventBoundary, setWorldEventSeed, synchronizeWorldEventSourceSchedule, WORLD_EVENT_SEED } from './world-events';
 export type { InvariantViolation } from './invariants';
 export type { PerceptionChannel, PerceptionChannelId, WorldEventPerception } from './perception';
 export type { PhoneCapabilities } from './phone';
-export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType, PhoneCallRecord, PhoneMessageRecord, PhoneState, SensoryProfile, WorldEventDefinitionId, WorldEventState, WorldPosition } from './model';
+export type { WorldEventBoundary } from './world-events';
+export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType, PhoneCallRecord, PhoneMessageRecord, PhoneState, ProceduralWorldEventTransition, SensoryProfile, WorldEventDefinitionId, WorldEventSourceState, WorldEventState, WorldPosition } from './model';

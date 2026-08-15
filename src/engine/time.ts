@@ -1,9 +1,11 @@
 import { advanceWorldEffects, type EffectAdvanceResult } from './effects';
 import { applyDueInfrastructureTransitions, secondsUntilNextInfrastructureTransition } from './infrastructure';
-import type { GameState, NeedsState } from './model';
+import type { GameState, NeedsState, ProceduralWorldEventTransition } from './model';
 import { advancePerishables, type PerishableChange } from './perishables';
+import { getPerceivedWorldEvents, type WorldEventPerception } from './perception';
 import { advancePhysiology, BASE_RATES_PER_MINUTE, type PhysiologyAdvanceResult } from './physiology';
 import { advanceItemResources, type ItemResourceChange } from './resources';
+import { applyDueWorldEventTransitions, secondsUntilNextWorldEventBoundary } from './world-events';
 
 export { BASE_RATES_PER_MINUTE } from './physiology';
 export type { PhysiologyAdvanceResult } from './physiology';
@@ -14,6 +16,8 @@ export interface TimeAdvanceResult extends PhysiologyAdvanceResult {
   itemResourceChanges: ItemResourceChange[];
   perishableChanges: PerishableChange[];
   effects: EffectAdvanceResult;
+  worldEventTransitions: ProceduralWorldEventTransition[];
+  perceivedWorldEvents: WorldEventPerception[];
 }
 
 function emptyNeeds(): NeedsState {
@@ -37,7 +41,7 @@ function advanceClock(state: GameState, seconds: number): void {
   }
 }
 
-function advanceTimeSegment(state: GameState, seconds: number): TimeAdvanceResult {
+function advanceTimeSegment(state: GameState, seconds: number): Omit<TimeAdvanceResult, 'worldEventTransitions' | 'perceivedWorldEvents'> {
   const elapsedSeconds = Math.max(0, Number(seconds) || 0);
   const effects = advanceWorldEffects(state, elapsedSeconds);
   const physiology = advancePhysiology(state, elapsedSeconds);
@@ -50,8 +54,16 @@ function advanceTimeSegment(state: GameState, seconds: number): TimeAdvanceResul
 export function advanceTime(state: GameState, seconds: number): TimeAdvanceResult {
   const elapsedSeconds = Math.max(0, Number(seconds) || 0);
   applyDueInfrastructureTransitions(state);
+  const initialWorldTransitions = applyDueWorldEventTransitions(state);
 
-  if (elapsedSeconds === 0) return advanceTimeSegment(state, 0);
+  if (elapsedSeconds === 0) {
+    const segment = advanceTimeSegment(state, 0);
+    return {
+      ...segment,
+      worldEventTransitions: initialWorldTransitions,
+      perceivedWorldEvents: getPerceivedWorldEvents(state, null, { markDiscovered: true }),
+    };
+  }
 
   const baseline = advancePhysiology(state, 0);
   const naturalChanges = emptyNeeds();
@@ -60,18 +72,24 @@ export function advanceTime(state: GameState, seconds: number): TimeAdvanceResul
   const createdEffectIds = new Set<string>();
   const resolvedEffectIds = new Set<string>();
   const startedEventIds = new Set<string>();
+  const worldEventTransitions: ProceduralWorldEventTransition[] = [...initialWorldTransitions];
   let effectDamageBudgetAddedPv = 0;
   let healthLostPv = 0;
   let remaining = elapsedSeconds;
   let lastPhysiology = baseline;
+  let guard = 0;
 
-  while (remaining > 0) {
-    const untilTransition = secondsUntilNextInfrastructureTransition(state, remaining);
-    const segmentSeconds = Math.min(remaining, untilTransition);
+  while (remaining > 0 && guard < 2000) {
+    guard += 1;
+    const untilInfrastructure = secondsUntilNextInfrastructureTransition(state, remaining);
+    const untilWorldEvent = secondsUntilNextWorldEventBoundary(state, remaining);
+    const segmentSeconds = Math.min(remaining, untilInfrastructure, untilWorldEvent);
 
     if (segmentSeconds <= 0) {
-      const applied = applyDueInfrastructureTransitions(state);
-      if (applied.length === 0) break;
+      const infrastructureApplied = applyDueInfrastructureTransitions(state);
+      const worldApplied = applyDueWorldEventTransitions(state);
+      worldEventTransitions.push(...worldApplied);
+      if (infrastructureApplied.length === 0 && worldApplied.length === 0) break;
       continue;
     }
 
@@ -87,7 +105,10 @@ export function advanceTime(state: GameState, seconds: number): TimeAdvanceResul
     effectDamageBudgetAddedPv += segment.effects.effectDamageBudgetAddedPv;
 
     remaining -= segmentSeconds;
+    // Historical order: infrastructure is resolved before autonomous world events
+    // when both transitions share the exact same timestamp.
     applyDueInfrastructureTransitions(state);
+    worldEventTransitions.push(...applyDueWorldEventTransitions(state));
   }
 
   return {
@@ -104,6 +125,8 @@ export function advanceTime(state: GameState, seconds: number): TimeAdvanceResul
       effectDamageBudgetAddedPv,
       startedEventIds: [...startedEventIds],
     },
+    worldEventTransitions,
+    perceivedWorldEvents: getPerceivedWorldEvents(state, null, { markDiscovered: true }),
   };
 }
 

@@ -1,10 +1,12 @@
 import { INITIAL_STATE } from '../content/world';
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import type { GameState } from './model';
+import { ensureWorldEventSimulationState } from './world-events';
 
 export function createInitialState(): GameState {
   const state = structuredClone(INITIAL_STATE);
   ensureAutonomousInfrastructureTransitions(state);
+  ensureWorldEventSimulationState(state);
   return state;
 }
 

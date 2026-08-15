@@ -30,6 +30,8 @@ export interface EngineSimulationState {
   nextEffectId: number;
   infrastructureSeed?: number;
   infrastructureSimulationEnabled?: boolean;
+  worldEventSeed?: number;
+  worldEventSimulationEnabled?: boolean;
 }
 
 export interface LocationFeatures {
@@ -138,6 +140,7 @@ export interface WorldEventRecord {
 }
 
 export type WorldEventDefinitionId = 'water_leak' | 'security_alarm' | 'smoke_plume' | 'animal_noise' | 'unattended_noise';
+export type WorldEventCategory = 'hazard' | 'signal' | 'life' | 'ambient';
 
 export interface SensoryProfile {
   audibleRangeM: number;
@@ -145,26 +148,68 @@ export interface SensoryProfile {
   smellRangeM: number;
 }
 
+export type WorldEventSourceCondition =
+  | { type: 'infrastructure_available'; systemType: 'water' | 'electricity' | 'mobile'; zoneId?: string; minimumLevelPct?: number }
+  | { type: 'infrastructure_status'; systemType: 'water' | 'electricity' | 'mobile'; zoneId?: string; status?: 'on' | 'unstable' | 'off'; statuses?: Array<'on' | 'unstable' | 'off'> }
+  | { type: 'location_exists'; locationId?: LocationId };
+
+export interface WorldEventSourceState {
+  id: string;
+  definitionId: WorldEventDefinitionId;
+  locationId: LocationId | null;
+  position: WorldPosition | null;
+  enabled: boolean;
+  autonomous: boolean;
+  probability: number;
+  minDelaySeconds: number;
+  maxDelaySeconds: number;
+  cooldownMinSeconds: number;
+  cooldownMaxSeconds: number;
+  durationSeconds: number;
+  maxOccurrences: number;
+  maxAttempts: number;
+  attemptIndex: number;
+  occurrenceCount: number;
+  scheduleBaseAtSeconds: number | null;
+  nextTriggerAtSeconds: number | null;
+  conditions: WorldEventSourceCondition[] | null;
+  sensory: Partial<SensoryProfile> | null;
+  metadata: Record<string, unknown>;
+  infrastructureZoneId?: string;
+}
+
 export interface WorldEventState {
   id: string;
   definitionId: WorldEventDefinitionId;
+  sourceId?: string;
+  category?: WorldEventCategory;
   status: 'active' | 'resolved';
   locationId?: LocationId;
   position?: WorldPosition;
   sensory?: SensoryProfile;
   narrativeEvent: string;
   tags: string[];
+  metadata?: Record<string, unknown>;
   discoveredByPlayer: boolean;
   startedAtSeconds: number;
+  endsAtSeconds?: number;
   resolvedAtSeconds?: number;
 }
+
+export type ProceduralWorldEventTransition =
+  | { type: 'skipped'; sourceId: string; definitionId: WorldEventDefinitionId; worldElapsedSeconds: number; reason: 'PROBABILITY' | 'CONDITIONS'; probabilityRoll: number }
+  | { type: 'started'; eventId: string; event: WorldEventState; worldElapsedSeconds: number }
+  | { type: 'resolved'; eventId: string; definitionId: WorldEventDefinitionId; sourceId: string; worldElapsedSeconds: number };
+
+export type WorldHistoryRecord = WorldEventRecord | ProceduralWorldEventTransition;
 
 export interface WorldState {
   effects: PersistentEffect[];
   windowsOpen: Record<LocationId, boolean>;
   leakActive: boolean;
   scheduledEvents: ScheduledWorldEvent[];
-  eventHistory: WorldEventRecord[];
+  eventHistory: WorldHistoryRecord[];
+  eventSources?: Record<string, WorldEventSourceState>;
   events?: WorldEventState[];
 }
 

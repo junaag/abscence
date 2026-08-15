@@ -1,8 +1,4 @@
-import type { SensoryProfile, WorldEventDefinitionId } from '../engine/model';
-
-export type WorldEventCondition =
-  | { type: 'infrastructure_available'; systemType: 'water'; zoneId: 'home' }
-  | { type: 'infrastructure_available'; systemType: 'electricity'; zoneId: 'home'; minimumLevelPct: number };
+import type { SensoryProfile, WorldEventDefinitionId, WorldEventSourceCondition } from '../engine/model';
 
 export interface WorldEventDefinition {
   id: WorldEventDefinitionId;
@@ -12,20 +8,20 @@ export interface WorldEventDefinition {
   defaultMaxDelaySeconds: number;
   defaultProbability: number;
   sensory: Readonly<SensoryProfile>;
-  conditions: readonly WorldEventCondition[];
+  conditions: readonly WorldEventSourceCondition[];
   narrativeEvent: string;
   tags: readonly string[];
 }
 
-const WATER_AVAILABLE: readonly WorldEventCondition[] = Object.freeze([
+const WATER_AVAILABLE: readonly WorldEventSourceCondition[] = Object.freeze([
   { type: 'infrastructure_available', systemType: 'water', zoneId: 'home' },
 ]);
 
-const ELECTRICITY_AVAILABLE_20: readonly WorldEventCondition[] = Object.freeze([
+const ELECTRICITY_AVAILABLE_20: readonly WorldEventSourceCondition[] = Object.freeze([
   { type: 'infrastructure_available', systemType: 'electricity', zoneId: 'home', minimumLevelPct: 20 },
 ]);
 
-const NO_CONDITIONS: readonly WorldEventCondition[] = Object.freeze([]);
+const NO_CONDITIONS: readonly WorldEventSourceCondition[] = Object.freeze([]);
 
 export const WORLD_EVENT_DEFINITIONS: Readonly<Record<WorldEventDefinitionId, WorldEventDefinition>> = Object.freeze({
   water_leak: Object.freeze({

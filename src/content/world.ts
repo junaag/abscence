@@ -11,6 +11,8 @@ export const INITIAL_STATE: GameState = {
     nextEffectId: 1,
     infrastructureSeed: 1701,
     infrastructureSimulationEnabled: true,
+    worldEventSeed: 1801,
+    worldEventSimulationEnabled: true,
   },
   player: {
     locationId: 'bedroom',
@@ -55,6 +57,7 @@ export const INITIAL_STATE: GameState = {
       { id: 'evt_smoke', atSeconds: 25 * 60, type: 'smoke', locationId: 'garden', processed: false },
     ],
     eventHistory: [],
+    eventSources: {},
     events: [],
   },
   phone: createInitialPhoneState(),

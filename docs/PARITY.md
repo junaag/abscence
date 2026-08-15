@@ -44,6 +44,9 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Perception à distance v0.1.8 restaurée** : distance locale métrique, Haversine géographique puis repli sur le graphe des lieux à `travelSeconds × 1,4 m/s`.
 - Les canaux `audible`, `visible` et `smell` sont indépendants ; leur force décroît linéairement selon `1 − distance/portée`, et un événement hors de toute portée reste inconnu du joueur.
 - Les événements perçus sont triés par distance et peuvent être marqués découverts sans rendre visibles les événements hors portée.
+- **Scheduler autonome v0.1.8 restauré** : sources sérialisables, seed 1801, fenêtres de déclenchement, probabilités, conditions, durée, occurrences/tentatives, cycle `planifiée → active → résolue` et historique borné.
+- Les événements autonomes restent reproductibles quel que soit le découpage de `advanceTime`; une transition d'infrastructure au même instant est toujours appliquée avant la tentative d'événement.
+- Comme dans le moteur v0.1.8 pur, une nouvelle partie v0.2 démarre avec `eventSources: {}` : les cinq sources de démonstration appartenaient au pont v0.85 et ne sont pas injectées implicitement dans le scénario.
 - **Téléphone historique piloté par GameState** : appels récents et messages d’Épouse/Alice/Lilou sont persistés dans l'état moteur et migrés pour les sauvegardes v0.2-dev plus anciennes ; l'UI ne contient plus ces données en dur.
 - Écran téléphone : historique local consultable hors réseau si l'appareil est transporté et alimenté ; batterie et réseau affichés depuis l'état réel.
 - **Capacités téléphone dérivées par le moteur** : appel, SMS et data suivent batterie + seuils réseau v0.1.8 ; l'historique local reste indépendant du réseau.
@@ -54,7 +57,6 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 ## À migrer avant promotion
 
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
-- Événements autonomes procéduraux avec seed au-delà des trois événements historiques fixes déjà restaurés.
 - Téléphone : actions sortantes appel/SMS et leurs résultats de gameplay ; écrans Météo et Réglages.
 - Carte Leaflet + fog of war géographique persistant.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
