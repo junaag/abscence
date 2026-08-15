@@ -41,6 +41,24 @@ export function validateState(state: GameState): InvariantViolation[] {
     if (!Number.isFinite(effect.updatedAtSeconds) || effect.updatedAtSeconds < effect.createdAtSeconds) errors.push(violation('EFFECT_UPDATED_AT_INVALID', `${effect.id} has invalid updatedAtSeconds.`));
     if (!effect.active && effect.intensity !== 0) errors.push(violation('RESOLVED_EFFECT_NONZERO', `${effect.id} is inactive but still has non-zero intensity.`));
   }
+
+  const scheduledIds = new Set<string>();
+  for (const event of state.world.scheduledEvents) {
+    if (scheduledIds.has(event.id)) errors.push(violation('SCHEDULED_EVENT_DUPLICATE_ID', `Scheduled event id ${event.id} is duplicated.`));
+    scheduledIds.add(event.id);
+    if (!state.locations[event.locationId]) errors.push(violation('SCHEDULED_EVENT_LOCATION_MISSING', `${event.id} points to missing location ${event.locationId}.`));
+    if (!Number.isFinite(event.atSeconds) || event.atSeconds < 0) errors.push(violation('SCHEDULED_EVENT_TIME_INVALID', `${event.id} has invalid atSeconds.`));
+    if (event.processed && event.atSeconds > state.engine.elapsedSeconds) errors.push(violation('SCHEDULED_EVENT_PROCESSED_EARLY', `${event.id} is marked processed before its scheduled time.`));
+  }
+
+  const worldEventIds = new Set<string>();
+  for (const event of state.world.eventHistory) {
+    if (worldEventIds.has(event.id)) errors.push(violation('WORLD_EVENT_DUPLICATE_ID', `World event id ${event.id} is duplicated.`));
+    worldEventIds.add(event.id);
+    if (!state.locations[event.locationId]) errors.push(violation('WORLD_EVENT_LOCATION_MISSING', `${event.id} points to missing location ${event.locationId}.`));
+    if (!Number.isFinite(event.atSeconds) || event.atSeconds < 0 || event.atSeconds > state.engine.elapsedSeconds) errors.push(violation('WORLD_EVENT_TIME_INVALID', `${event.id} has invalid atSeconds.`));
+  }
+
   for (const locationId of Object.keys(state.world.windowsOpen)) if (!state.locations[locationId]) errors.push(violation('WINDOW_LOCATION_MISSING', `Window state points to missing location ${locationId}.`));
 
   const inventorySeen = new Set<string>();

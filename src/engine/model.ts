@@ -107,10 +107,29 @@ export interface PersistentEffect {
   resolutionReason?: string;
 }
 
+export type ScheduledWorldEventType = 'noise_source' | 'water_leak' | 'smoke';
+
+export interface ScheduledWorldEvent {
+  id: string;
+  atSeconds: number;
+  type: ScheduledWorldEventType;
+  locationId: LocationId;
+  processed: boolean;
+}
+
+export interface WorldEventRecord {
+  id: string;
+  type: 'WORLD_PERSISTENT_NOISE' | 'WORLD_WATER_LEAK' | 'WORLD_SMOKE';
+  locationId: LocationId;
+  atSeconds: number;
+}
+
 export interface WorldState {
   effects: PersistentEffect[];
   windowsOpen: Record<LocationId, boolean>;
   leakActive: boolean;
+  scheduledEvents: ScheduledWorldEvent[];
+  eventHistory: WorldEventRecord[];
 }
 
 export interface MemoryState {

@@ -37,6 +37,16 @@ export const INITIAL_STATE: GameState = {
     electricity: { available: true, voltagePercent: 100 },
     mobile: { available: true, signal: 3 },
   },
-  world: { effects: [], windowsOpen: { bedroom: false, kitchen: false }, leakActive: false },
+  world: {
+    effects: [],
+    windowsOpen: { bedroom: false, kitchen: false },
+    leakActive: false,
+    scheduledEvents: [
+      { id: 'evt_noise', atSeconds: 5 * 60, type: 'noise_source', locationId: 'kitchen', processed: false },
+      { id: 'evt_leak', atSeconds: 12 * 60, type: 'water_leak', locationId: 'kitchen', processed: false },
+      { id: 'evt_smoke', atSeconds: 25 * 60, type: 'smoke', locationId: 'garden', processed: false },
+    ],
+    eventHistory: [],
+  },
   memory: { shoutedForWife: false, visitedLocationIds: ['bedroom'] },
 };

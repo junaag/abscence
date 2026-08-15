@@ -1,10 +1,11 @@
-import type { GameState, PersistentEffect, PersistentEffectType } from './model';
+import type { GameState, PersistentEffect, PersistentEffectType, WorldEventRecord } from './model';
 import { clampNeeds } from './state';
 
 export interface EffectAdvanceResult {
   createdEffectIds: string[];
   resolvedEffectIds: string[];
   effectDamageBudgetAddedPv: number;
+  startedEventIds: string[];
 }
 
 function clamp(value: number, min = 0, max = 100): number {
@@ -47,6 +48,7 @@ export function addPersistentEffect(
     existing.intensity = clamp(Math.max(existing.intensity, intensity));
     if (options.source !== undefined) existing.source = options.source;
     if (options.spreading !== undefined) existing.spreading = options.spreading;
+    if (options.atSeconds !== undefined) existing.updatedAtSeconds = options.atSeconds;
     return existing;
   }
 
@@ -147,32 +149,83 @@ function applyLocalEffects(state: GameState, minutes: number): number {
   return damageBudget;
 }
 
+function recordWorldEvent(state: GameState, type: WorldEventRecord['type'], locationId: string, atSeconds: number): void {
+  state.world.eventHistory.push({
+    id: `world_${state.world.eventHistory.length + 1}`,
+    type,
+    locationId,
+    atSeconds,
+  });
+}
+
+function processScheduledEventsAt(state: GameState, atSeconds: number): string[] {
+  const started: string[] = [];
+  for (const event of state.world.scheduledEvents) {
+    if (event.processed || event.atSeconds > atSeconds) continue;
+    event.processed = true;
+    if (event.type === 'noise_source') {
+      addPersistentEffect(state, 'persistent_noise', event.locationId, 58, { source: 'unattended_device', atSeconds: event.atSeconds });
+      recordWorldEvent(state, 'WORLD_PERSISTENT_NOISE', event.locationId, event.atSeconds);
+    } else if (event.type === 'water_leak') {
+      state.world.leakActive = true;
+      addPersistentEffect(state, 'water_puddle', event.locationId, 18, { source: 'leak', atSeconds: event.atSeconds });
+      recordWorldEvent(state, 'WORLD_WATER_LEAK', event.locationId, event.atSeconds);
+    } else if (event.type === 'smoke') {
+      addPersistentEffect(state, 'smoke', event.locationId, 46, { source: 'distant_fire', atSeconds: event.atSeconds });
+      recordWorldEvent(state, 'WORLD_SMOKE', event.locationId, event.atSeconds);
+    }
+    started.push(event.id);
+  }
+  return started;
+}
+
+function nextScheduledEventSecond(state: GameState, current: number, target: number): number | undefined {
+  let next: number | undefined;
+  for (const event of state.world.scheduledEvents) {
+    if (event.processed || event.atSeconds <= current || event.atSeconds > target) continue;
+    if (next === undefined || event.atSeconds < next) next = event.atSeconds;
+  }
+  return next;
+}
+
 export function advanceWorldEffects(state: GameState, seconds: number): EffectAdvanceResult {
-  let remaining = Math.max(0, Number(seconds) || 0);
-  let processed = 0;
+  const elapsed = Math.max(0, Number(seconds) || 0);
+  const target = state.engine.elapsedSeconds + elapsed;
+  let current = state.engine.elapsedSeconds;
   let damageBudgetAdded = 0;
   const createdEffectIds: string[] = [];
   const resolvedEffectIds: string[] = [];
+  const startedEventIds = processScheduledEventsAt(state, current);
 
-  while (remaining > 0) {
-    const stepSeconds = Math.min(60, remaining);
-    const minutes = stepSeconds / 60;
-    processed += stepSeconds;
-    const atSeconds = state.engine.elapsedSeconds + processed;
-    const activeAtStart = state.world.effects.filter((effect) => effect.active);
+  while (current < target) {
+    const nextEvent = nextScheduledEventSecond(state, current, target);
+    const boundary = nextEvent ?? target;
 
-    for (const effect of activeAtStart) evolveEffect(state, effect, minutes, atSeconds, createdEffectIds);
-    damageBudgetAdded += applyLocalEffects(state, minutes);
+    while (current < boundary) {
+      const stepSeconds = Math.min(60, boundary - current);
+      const minutes = stepSeconds / 60;
+      current += stepSeconds;
+      const activeAtStart = state.world.effects.filter((effect) => effect.active);
 
-    for (const effect of state.world.effects) {
-      if (effect.active && effect.intensity <= 0.1) {
-        resolveEffect(effect, atSeconds);
-        resolvedEffectIds.push(effect.id);
+      for (const effect of activeAtStart) evolveEffect(state, effect, minutes, current, createdEffectIds);
+      damageBudgetAdded += applyLocalEffects(state, minutes);
+
+      for (const effect of state.world.effects) {
+        if (effect.active && effect.intensity <= 0.1) {
+          resolveEffect(effect, current);
+          resolvedEffectIds.push(effect.id);
+        }
       }
     }
-    remaining -= stepSeconds;
+
+    startedEventIds.push(...processScheduledEventsAt(state, current));
   }
 
   state.engine.damageBudgetPv = round(state.engine.damageBudgetPv + damageBudgetAdded, 6);
-  return { createdEffectIds: [...new Set(createdEffectIds)], resolvedEffectIds, effectDamageBudgetAddedPv: round(damageBudgetAdded, 6) };
+  return {
+    createdEffectIds: [...new Set(createdEffectIds)],
+    resolvedEffectIds,
+    effectDamageBudgetAddedPv: round(damageBudgetAdded, 6),
+    startedEventIds: [...new Set(startedEventIds)],
+  };
 }
