@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
