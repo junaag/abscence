@@ -20,9 +20,9 @@ export const INITIAL_STATE: GameState = {
     alive: true,
   },
   locations: {
-    bedroom: { id: 'bedroom', name: 'Chambre', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.15, features: {} },
-    kitchen: { id: 'kitchen', name: 'Cuisine', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.18, features: { tap: true, powerOutlet: true } },
-    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 1, features: {} },
+    bedroom: { id: 'bedroom', name: 'Chambre', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.15, features: {}, position: { x: 0, y: 0 } },
+    kitchen: { id: 'kitchen', name: 'Cuisine', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.18, features: { tap: true, powerOutlet: true }, position: { x: 10, y: 0 } },
+    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 1, features: {}, position: { x: 20, y: 0 } },
   },
   connections: {
     bedroom_kitchen: { id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', type: 'door', open: true, locked: false, openSeconds: 2, travelSeconds: 12 },
@@ -55,6 +55,7 @@ export const INITIAL_STATE: GameState = {
       { id: 'evt_smoke', atSeconds: 25 * 60, type: 'smoke', locationId: 'garden', processed: false },
     ],
     eventHistory: [],
+    events: [],
   },
   phone: createInitialPhoneState(),
   memory: { shoutedForWife: false, visitedLocationIds: ['bedroom'] },

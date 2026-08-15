@@ -37,6 +37,10 @@ export interface LocationFeatures {
   powerOutlet?: boolean;
 }
 
+export type WorldPosition =
+  | { x: number; y: number }
+  | { lat: number; lon: number };
+
 export interface LocationState {
   id: LocationId;
   name: string;
@@ -44,6 +48,7 @@ export interface LocationState {
   ambientHumidityPercent: number;
   ventilation: number;
   features: LocationFeatures;
+  position?: WorldPosition;
 }
 
 export interface ConnectionState {
@@ -132,12 +137,35 @@ export interface WorldEventRecord {
   atSeconds: number;
 }
 
+export type WorldEventDefinitionId = 'water_leak' | 'security_alarm' | 'smoke_plume' | 'animal_noise' | 'unattended_noise';
+
+export interface SensoryProfile {
+  audibleRangeM: number;
+  visibleRangeM: number;
+  smellRangeM: number;
+}
+
+export interface WorldEventState {
+  id: string;
+  definitionId: WorldEventDefinitionId;
+  status: 'active' | 'resolved';
+  locationId?: LocationId;
+  position?: WorldPosition;
+  sensory?: SensoryProfile;
+  narrativeEvent: string;
+  tags: string[];
+  discoveredByPlayer: boolean;
+  startedAtSeconds: number;
+  resolvedAtSeconds?: number;
+}
+
 export interface WorldState {
   effects: PersistentEffect[];
   windowsOpen: Record<LocationId, boolean>;
   leakActive: boolean;
   scheduledEvents: ScheduledWorldEvent[];
   eventHistory: WorldEventRecord[];
+  events?: WorldEventState[];
 }
 
 export interface PhoneCallRecord {
