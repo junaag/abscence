@@ -3,7 +3,7 @@ import { gunzipSync } from 'node:zlib';
 import { runInNewContext } from 'node:vm';
 import { describe, expect, it } from 'vitest';
 import { validateState } from '../../src/engine/invariants';
-import { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, migrateLegacyPreviewState } from '../../src/engine/legacy-migration';
+import { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, migrateLegacyPreviewState } from '../../src/engine/legacy-migration-compat';
 import { loadState, SAVE_KEY } from '../../src/engine/persistence';
 import { createInitialState } from '../../src/engine/state';
 import type { GameState } from '../../src/engine/model';
@@ -64,36 +64,26 @@ function historicalItems(state: Record<string, unknown>): Record<string, unknown
   return object(state.items);
 }
 
-function normalizedName(item: Record<string, unknown>): string {
-  return String(item.name ?? item.label ?? item.displayName ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-}
-
 function findHistoricalItem(state: Record<string, unknown>, predicate: (id: string, item: Record<string, unknown>) => boolean): [string, Record<string, unknown>] {
-  const items = historicalItems(state);
-  for (const [id, raw] of Object.entries(items)) {
+  for (const [id, raw] of Object.entries(historicalItems(state))) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const item = raw as Record<string, unknown>;
     if (predicate(id, item)) return [id, item];
   }
-  const summary = Object.entries(items).map(([id, raw]) => {
-    const item = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
-    return { id, keys: Object.keys(item).sort(), name: item.name ?? item.label ?? item.displayName, type: item.type, kind: item.kind, definitionId: item.definitionId };
-  });
-  throw new Error(`Historical item not found: ${JSON.stringify(summary)}`);
+  throw new Error('Historical item not found');
 }
 
 function historicalApple(state: Record<string, unknown>): [string, Record<string, unknown>] {
-  return findHistoricalItem(state, (_id, item) => {
-    const name = normalizedName(item);
-    return name.includes('pomme') || name.includes('apple') || item.type === 'food' || item.kind === 'food';
-  });
+  return findHistoricalItem(state, (id, item) => id === 'apple_01' || item.definitionId === 'apple');
 }
 
 function historicalBottle(state: Record<string, unknown>): [string, Record<string, unknown>] {
-  return findHistoricalItem(state, (_id, item) => {
-    const name = normalizedName(item);
-    return name.includes('bouteille') || name.includes('bottle') || typeof item.capacityMl === 'number' || typeof item.liquidMl === 'number' || typeof item.waterMl === 'number';
-  });
+  return findHistoricalItem(state, (id, item) => id === 'water_bottle_01' || String(item.definitionId ?? '').startsWith('water_bottle'));
+}
+
+function historicalMutableState(item: Record<string, unknown>): Record<string, unknown> {
+  if (item.state && typeof item.state === 'object' && !Array.isArray(item.state)) return object(item.state);
+  return item;
 }
 
 const historicalEngine = loadHistoricalEngine();
@@ -118,6 +108,9 @@ describe('controlled preview save migration', () => {
       },
     });
     expect(migrated?.player.inventoryIds).toContain('phone_01');
+    expect(migrated?.items.apple_01?.location).toEqual({ kind: 'location', id: 'kitchen' });
+    expect(migrated?.items.water_01?.location).toEqual({ kind: 'location', id: 'kitchen' });
+    expect(migrated?.items.water_01?.liquidMl).toBe(500);
   });
 
   it('preserves recognized gameplay progress without resurrecting a consumed apple', () => {
@@ -134,10 +127,11 @@ describe('controlled preview save migration', () => {
     const [appleId] = historicalApple(legacy);
     delete items[appleId];
     const [waterId, water] = historicalBottle(legacy);
-    if ('liquidMl' in water) water.liquidMl = 125;
-    else if ('amountMl' in water) water.amountMl = 125;
-    else if ('waterMl' in water) water.waterMl = 125;
-    else water.liquidMl = 125;
+    const waterState = historicalMutableState(water);
+    if ('liquidMl' in waterState) waterState.liquidMl = 125;
+    else if ('amountMl' in waterState) waterState.amountMl = 125;
+    else if ('waterMl' in waterState) waterState.waterMl = 125;
+    else waterState.liquidMl = 125;
     const inventory = historicalInventory(legacy);
     if (!inventory.includes(waterId)) inventory.push(waterId);
 
