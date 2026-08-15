@@ -1,4 +1,7 @@
+import { isWaterAvailable } from './infrastructure';
 import type { ConnectionState, ContainerState, GameState, ItemState, LocationState } from './model';
+
+export { isElectricityAvailable, isMobileAvailable, isWaterAvailable } from './infrastructure';
 
 export function currentLocation(state: GameState): LocationState {
   const location = state.locations[state.player.locationId];
@@ -50,10 +53,6 @@ export function isItemAccessible(state: GameState, itemId: string): boolean {
   return false;
 }
 
-export function isElectricityAvailable(state: GameState): boolean {
-  return state.infrastructure.electricity.available && state.infrastructure.electricity.voltagePercent > 0;
-}
-
 export function hasRunningTap(state: GameState): boolean {
-  return Boolean(currentLocation(state).features.tap && state.infrastructure.water.available);
+  return Boolean(currentLocation(state).features.tap && isWaterAvailable(state));
 }
