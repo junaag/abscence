@@ -36,3 +36,15 @@ test('phone restores local calls and messages with engine battery and network st
   await expect(page.getByText('Hier · 18:12')).toBeVisible();
   await expect(page.getByText('Hier · 18:09')).toBeVisible();
 });
+
+test('phone weather reads the persisted simulated world state', async ({ page }) => {
+  await page.getByRole('button', { name: /Téléphone/ }).click();
+  await page.getByRole('button', { name: 'Météo' }).click();
+  await expect(page.getByTestId('phone-weather')).toBeVisible();
+  await expect(page.getByText('23 °C')).toBeVisible();
+  await expect(page.getByText('Ciel dégagé')).toBeVisible();
+  await expect(page.getByText('55 %')).toBeVisible();
+  await expect(page.getByText('8 km/h')).toBeVisible();
+  await expect(page.getByText('0 mm/h')).toBeVisible();
+  await expect(page.getByText('Monde simulé')).toBeVisible();
+});
