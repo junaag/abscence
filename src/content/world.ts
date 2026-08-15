@@ -1,9 +1,10 @@
 import { createInitialPhoneState } from './phone';
 import type { GameState } from '../engine/model';
+import { GAME_VERSION, SAVE_SCHEMA_VERSION } from '../version';
 
 export const INITIAL_STATE: GameState = {
-  schemaVersion: 1,
-  gameVersion: '0.2.0-dev',
+  schemaVersion: SAVE_SCHEMA_VERSION,
+  gameVersion: GAME_VERSION,
   clock: { day: 1, secondOfDay: 7 * 3600 + 12 * 60 },
   engine: {
     damageBudgetPv: 0,
@@ -35,30 +36,23 @@ export const INITIAL_STATE: GameState = {
     kitchen_fridge: { id: 'kitchen_fridge', definitionId: 'refrigerator', name: 'Réfrigérateur', locationId: 'kitchen', open: false, locked: false, contentIds: [] },
   },
   items: {
-    phone_01: { id: 'phone_01', definitionId: 'smartphone', name: 'Téléphone', location: { kind: 'inventory' }, examined: false, batteryPercent: 78, condition: 'Bon état' },
-    apple_01: { id: 'apple_01', definitionId: 'apple', name: 'Pomme', location: { kind: 'location', id: 'kitchen' }, examined: false, freshnessPercent: 94 },
-    water_01: { id: 'water_01', definitionId: 'water_bottle', name: "Bouteille d’eau", location: { kind: 'location', id: 'kitchen' }, examined: false, liquidMl: 500, capacityMl: 500, condition: 'Bon état' },
-    towel_01: { id: 'towel_01', definitionId: 'towel', name: 'Torchon', location: { kind: 'location', id: 'kitchen' }, examined: false, condition: 'Sec' },
+    phone_01: { id: 'phone_01', definitionId: 'smartphone', name: 'Téléphone', location: { kind: 'inventory' }, examined: false, condition: 'Bon état', batteryPercent: 78, enabled: false },
+    flashlight_01: { id: 'flashlight_01', definitionId: 'flashlight', name: 'Lampe torche', location: { kind: 'location', id: 'bedroom' }, examined: false, condition: 'Bon état', batteryPercent: 64, enabled: false },
     spare_key_01: { id: 'spare_key_01', definitionId: 'key', name: 'Petite clé', location: { kind: 'container', id: 'bedroom_drawer' }, examined: false, condition: 'Bon état' },
+    apple_01: { id: 'apple_01', definitionId: 'apple', name: 'Pomme', location: { kind: 'location', id: 'kitchen' }, examined: false, condition: 'Fraîche', freshnessPercent: 94 },
+    water_01: { id: 'water_01', definitionId: 'water_bottle', name: 'Bouteille d’eau', location: { kind: 'location', id: 'kitchen' }, examined: false, condition: 'Bon état', liquidMl: 500, capacityMl: 500 },
+    towel_01: { id: 'towel_01', definitionId: 'towel', name: 'Torchon', location: { kind: 'location', id: 'kitchen' }, examined: false, condition: 'Sec' },
   },
   infrastructure: {
-    water: { available: true, pressure: 1 },
-    electricity: { available: true, voltagePercent: 100 },
-    mobile: { available: true, signal: 4, signalPercent: 100 },
+    electricity: { phase: 'on', available: true, voltagePercent: 100 },
+    water: { phase: 'on', available: true, pressurePercent: 100 },
+    mobile: { phase: 'on', available: true, signalBars: 4, signalPercent: 100 },
     transitions: [],
   },
   world: {
-    effects: [],
-    windowsOpen: { bedroom: false, kitchen: false },
     leakActive: false,
-    scheduledEvents: [
-      { id: 'evt_noise', atSeconds: 5 * 60, type: 'noise_source', locationId: 'kitchen', processed: false },
-      { id: 'evt_leak', atSeconds: 12 * 60, type: 'water_leak', locationId: 'kitchen', processed: false },
-      { id: 'evt_smoke', atSeconds: 25 * 60, type: 'smoke', locationId: 'garden', processed: false },
-    ],
-    eventHistory: [],
-    eventSources: {},
-    events: [],
+    windowOpenByLocation: { bedroom: false, kitchen: false, garden: true },
+    effects: [],
   },
   phone: createInitialPhoneState(),
   memory: { shoutedForWife: false, visitedLocationIds: ['bedroom'] },
