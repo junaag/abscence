@@ -2,6 +2,7 @@ import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import { assertValidState, validateState } from './invariants';
 import { loadLegacyPreviewMigration } from './legacy-migration-compat';
 import { ensureLocationEnvironmentState } from './location-environment';
+import { assertValidLocationEnvironmentState, validateLocationEnvironmentState } from './location-environment-validation';
 import type { GameState } from './model';
 import { ensurePhoneState } from './phone';
 import { assertValidPhoneState, validatePhoneState } from './phone-validation';
@@ -39,7 +40,11 @@ export function loadState(storage: ReadStorage): GameState {
     ensureWeatherState(parsed);
     ensureLocationEnvironmentState(parsed);
     ensurePhoneState(parsed);
-    return validateState(parsed).length === 0 && validatePhoneState(parsed).length === 0 ? parsed : createInitialState();
+    return validateState(parsed).length === 0
+      && validateLocationEnvironmentState(parsed).length === 0
+      && validatePhoneState(parsed).length === 0
+      ? parsed
+      : createInitialState();
   } catch {
     return createInitialState();
   }
@@ -47,6 +52,7 @@ export function loadState(storage: ReadStorage): GameState {
 
 export function saveState(state: GameState, storage: WriteStorage): void {
   assertValidState(state);
+  assertValidLocationEnvironmentState(state);
   assertValidPhoneState(state);
   storage.setItem(SAVE_KEY, JSON.stringify(state));
 }
