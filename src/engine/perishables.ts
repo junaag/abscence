@@ -1,7 +1,8 @@
 import { getContainerDefinition } from '../content/containers';
 import { getItemDefinition, type PerishableComponent } from '../content/items';
 import { isElectricityAvailable } from './infrastructure';
-import type { GameState, ItemState, LocationId } from './model';
+import { getLocationTemperatureC } from './location-environment';
+import type { GameState, ItemState } from './model';
 
 export interface PerishableChange {
   itemId: string;
@@ -48,10 +49,6 @@ export function perishableSpoilageMultiplier(
   return Math.min(thermal, Math.max(0, Number(refrigeratedMultiplier)));
 }
 
-function ambientTemperature(state: GameState, locationId: LocationId): number {
-  return state.locations[locationId]?.ambientTemperatureC ?? 20;
-}
-
 function poweredContainerController(state: GameState, containerId: string): boolean {
   const container = state.containers[containerId];
   if (!container) return false;
@@ -64,7 +61,7 @@ function poweredContainerController(state: GameState, containerId: string): bool
 function containerTemperature(state: GameState, containerId: string): number | undefined {
   const container = state.containers[containerId];
   if (!container) return undefined;
-  const ambient = ambientTemperature(state, container.locationId);
+  const ambient = getLocationTemperatureC(state, container.locationId);
   const controller = getContainerDefinition(container.definitionId)?.environmentController;
   if (!controller || !poweredContainerController(state, containerId)) return ambient;
   return controller.targetTemperatureC;
@@ -73,8 +70,8 @@ function containerTemperature(state: GameState, containerId: string): number | u
 export function getItemStorageTemperatureC(state: GameState, itemOrId: ItemState | string): number | undefined {
   const item = typeof itemOrId === 'string' ? state.items[itemOrId] : itemOrId;
   if (!item || item.location.kind === 'consumed') return undefined;
-  if (item.location.kind === 'location') return ambientTemperature(state, item.location.id);
-  if (item.location.kind === 'inventory') return ambientTemperature(state, state.player.locationId);
+  if (item.location.kind === 'location') return getLocationTemperatureC(state, item.location.id);
+  if (item.location.kind === 'inventory') return getLocationTemperatureC(state, state.player.locationId);
   return containerTemperature(state, item.location.id);
 }
 
