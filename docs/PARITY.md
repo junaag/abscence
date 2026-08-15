@@ -11,7 +11,7 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Fatigue +1 % / 20 min.
 - **Perte de PV critique historique restaurée exactement** : budget fractionnaire persistant, soif ≥90/100 et faim ≥90/100.
 - Régression historique couverte : soif 95 %, +30 min → soif 97 %, santé −1 PV.
-- Calcul critique indépendant de la taille des pas de simulation.
+- Le calcul analytique conserve les mêmes résultats de PV quel que soit le découpage courant de simulation ; le léger écart sous le millième sur les valeurs fractionnaires est conservé car le v0.1.8 arrondissait chaque jauge et budget à 6 décimales après chaque avance.
 - Mort logique lorsque la santé atteint 0 PV.
 - Graphe de lieux canonique.
 - **Connexions/portes v0.1.8 migrées** : `open`, `locked`, durée d'ouverture et durée de traversée distinctes.
