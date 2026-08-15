@@ -1,8 +1,11 @@
 import { INITIAL_STATE } from '../content/world';
+import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import type { GameState } from './model';
 
 export function createInitialState(): GameState {
-  return structuredClone(INITIAL_STATE);
+  const state = structuredClone(INITIAL_STATE);
+  ensureAutonomousInfrastructureTransitions(state);
+  return state;
 }
 
 export function cloneState(state: GameState): GameState {

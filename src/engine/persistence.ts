@@ -1,3 +1,4 @@
+import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import type { GameState } from './model';
 import { assertValidState, validateState } from './invariants';
 import { createInitialState } from './state';
@@ -24,6 +25,7 @@ export function loadState(storage: ReadStorage): GameState {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!isGameState(parsed)) return createInitialState();
+    ensureAutonomousInfrastructureTransitions(parsed);
     return validateState(parsed).length === 0 ? parsed : createInitialState();
   } catch {
     return createInitialState();

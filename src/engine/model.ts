@@ -28,6 +28,8 @@ export interface EngineSimulationState {
   damageBudgetPv: number;
   elapsedSeconds: number;
   nextEffectId: number;
+  infrastructureSeed?: number;
+  infrastructureSimulationEnabled?: boolean;
 }
 
 export interface LocationFeatures {
@@ -88,12 +90,12 @@ export interface ItemState {
 export type InfrastructureTransitionState =
   | { id: string; network: 'electricity'; atSeconds: number; processed: boolean; available: boolean; voltagePercent?: number }
   | { id: string; network: 'water'; atSeconds: number; processed: boolean; available: boolean; pressure?: number }
-  | { id: string; network: 'mobile'; atSeconds: number; processed: boolean; available: boolean; signal?: number };
+  | { id: string; network: 'mobile'; atSeconds: number; processed: boolean; available: boolean; signal?: number; signalPercent?: number };
 
 export interface InfrastructureState {
   water: { available: boolean; pressure: number };
   electricity: { available: boolean; voltagePercent: number };
-  mobile: { available: boolean; signal: number };
+  mobile: { available: boolean; signal: number; signalPercent?: number };
   transitions?: InfrastructureTransitionState[];
 }
 

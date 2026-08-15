@@ -4,7 +4,13 @@ export const INITIAL_STATE: GameState = {
   schemaVersion: 1,
   gameVersion: '0.2.0-dev',
   clock: { day: 1, secondOfDay: 7 * 3600 + 12 * 60 },
-  engine: { damageBudgetPv: 0, elapsedSeconds: 0, nextEffectId: 1 },
+  engine: {
+    damageBudgetPv: 0,
+    elapsedSeconds: 0,
+    nextEffectId: 1,
+    infrastructureSeed: 1701,
+    infrastructureSimulationEnabled: true,
+  },
   player: {
     locationId: 'bedroom',
     healthPv: 100,
@@ -35,7 +41,7 @@ export const INITIAL_STATE: GameState = {
   infrastructure: {
     water: { available: true, pressure: 1 },
     electricity: { available: true, voltagePercent: 100 },
-    mobile: { available: true, signal: 3 },
+    mobile: { available: true, signal: 4, signalPercent: 100 },
     transitions: [],
   },
   world: {
