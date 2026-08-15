@@ -1,6 +1,6 @@
 import type { MapUiState } from '../app/map-state';
 import type { UiPreferences } from '../app/preferences';
-import { containerContents, containersAtCurrentLocation, currentLocation, formatClock, getContainerActions, getContextActions, getItemActions, getMobileNetworkState, getWeatherState, inventoryItems, looseItemsAtCurrentLocation, performAction, phoneCalls, phoneDeviceItemId, phoneMessages, type ActionOption, type ActionResult, type GameAction, type GameState, type WeatherCondition } from '../engine';
+import { containerContents, containersAtCurrentLocation, currentLocation, formatClock, getContainerActions, getContextActions, getItemActions, getMobileNetworkState, getWeatherState, inventoryItems, looseItemsAtCurrentLocation, performAction, phoneCalls, phoneDeviceItemId, phoneMessages, type ActionOption, type ActionResult, type GameAction, type GameState, type WeatherCondition } from '../app/game-api';
 import { describeCurrentLocation } from '../narrative/location';
 import { createMapController } from './map';
 import { menuOverlay, type MenuPanel } from './menu';
