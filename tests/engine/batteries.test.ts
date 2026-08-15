@@ -60,7 +60,7 @@ describe('generic battery resources from engine v0.1.8', () => {
     let state = createInitialState();
     addOutlet(state);
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
-    state.infrastructure.electricity.phase = 'off';
+    state.infrastructure.electricity.available = false;
     state.infrastructure.electricity.voltagePercent = 0;
     const result = performAction(state, { id: 'CHARGE_ITEM', targetId: 'phone_01', sourceId: 'outlet_01' });
     expect(result.result.success).toBe(false);
@@ -71,17 +71,19 @@ describe('generic battery resources from engine v0.1.8', () => {
     let state = createInitialState();
     addOutlet(state);
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
-    state.engine.infrastructureTimeline = [{
-      atElapsedSeconds: state.engine.elapsedSeconds + 120,
-      channel: 'electricity',
-      phase: 'off',
+    state.infrastructure.transitions = [{
+      id: 'power_off_during_charge',
+      network: 'electricity',
+      atSeconds: state.engine.elapsedSeconds + 120,
+      processed: false,
+      available: false,
       voltagePercent: 0,
     }];
-    state.engine.nextInfrastructureTransitionIndex = 0;
     const result = performAction(state, { id: 'CHARGE_ITEM', targetId: 'phone_01', sourceId: 'outlet_01', seconds: 600 });
     expect(result.result.success).toBe(true);
     expect(result.result.elapsedSeconds).toBe(120);
     expect(result.state.items.phone_01?.batteryPercent).toBeCloseTo(82, 5);
-    expect(result.state.infrastructure.electricity.phase).toBe('off');
+    expect(result.state.infrastructure.electricity.available).toBe(false);
+    expect(result.state.infrastructure.transitions?.[0]?.processed).toBe(true);
   });
 });
