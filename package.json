@@ -8,12 +8,13 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && npm run budget",
+    "budget": "node scripts/check-build-budget.mjs",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "lint": "eslint src tests vite.config.ts playwright.config.ts",
+    "lint": "eslint src tests scripts vite.config.ts playwright.config.ts",
     "ci": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
