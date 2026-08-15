@@ -121,11 +121,43 @@ function inventoryIds(legacy: UnknownRecord): Set<string> {
   return new Set<string>();
 }
 
-function legacyItemLocation(item: UnknownRecord, inventory: Set<string>, itemId: string, target: GameState): ItemLocation | null {
-  if (inventory.has(itemId) || item.carried === true || item.inInventory === true) return { kind: 'inventory' };
-  const rawLocation = stringValue(item.locationId) ?? stringValue(item.location);
+function normalizedDefinition(definitionId: string): string {
+  return definitionId.toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function definitionMatches(targetDefinitionId: string, legacyDefinitionId: string): boolean {
+  const target = normalizedDefinition(targetDefinitionId);
+  const legacy = normalizedDefinition(legacyDefinitionId);
+  if (target === legacy) return true;
+  if (target === 'waterbottle' && legacy.startsWith('waterbottle')) return true;
+  return false;
+}
+
+function legacyItemForTarget(legacyItems: UnknownRecord, targetId: string, targetDefinitionId: string): { id: string; item: UnknownRecord } | null {
+  const exact = record(legacyItems[targetId]);
+  if (exact) return { id: targetId, item: exact };
+
+  for (const [legacyId, raw] of Object.entries(legacyItems)) {
+    const item = record(raw);
+    if (!item) continue;
+    const definitionId = stringValue(item.definitionId);
+    if (definitionId && definitionMatches(targetDefinitionId, definitionId)) return { id: legacyId, item };
+  }
+  return null;
+}
+
+function mergedItemState(item: UnknownRecord): UnknownRecord {
+  return { ...item, ...(record(item.state) ?? {}) };
+}
+
+function legacyItemLocation(item: UnknownRecord, inventory: Set<string>, sourceId: string, target: GameState): ItemLocation | null {
+  const state = mergedItemState(item);
+  if (inventory.has(sourceId) || item.carried === true || item.inInventory === true || state.carried === true || state.inInventory === true) {
+    return { kind: 'inventory' };
+  }
+  const rawLocation = stringValue(item.locationId) ?? stringValue(state.locationId) ?? stringValue(item.location) ?? stringValue(state.location);
   if (rawLocation === 'inventory' || rawLocation === 'player' || rawLocation === 'carried') return { kind: 'inventory' };
-  if (rawLocation === 'consumed' || item.consumed === true) return { kind: 'consumed' };
+  if (rawLocation === 'consumed' || item.consumed === true || state.consumed === true) return { kind: 'consumed' };
   if (rawLocation && target.locations[rawLocation]) return { kind: 'location', id: rawLocation };
   return null;
 }
@@ -135,33 +167,40 @@ function migrateItems(target: GameState, legacy: UnknownRecord): void {
   if (!legacyItems) return;
   const inventory = inventoryIds(legacy);
 
-  for (const [itemId, targetItem] of Object.entries(target.items)) {
-    const legacyItem = record(legacyItems[itemId]);
-    if (!legacyItem) {
-      if (itemId === 'apple_01') targetItem.location = { kind: 'consumed' };
+  for (const targetItem of Object.values(target.items)) {
+    const source = legacyItemForTarget(legacyItems, targetItem.id, targetItem.definitionId);
+    if (!source) {
+      if (targetItem.id === 'apple_01') targetItem.location = { kind: 'consumed' };
       continue;
     }
-    const location = legacyItemLocation(legacyItem, inventory, itemId, target);
+
+    const state = mergedItemState(source.item);
+    const location = legacyItemLocation(source.item, inventory, source.id, target);
     if (location) targetItem.location = location;
 
-    const liquidMl = numberValue(legacyItem.liquidMl ?? legacyItem.amountMl ?? legacyItem.waterMl);
-    if (targetItem.capacityMl !== undefined && liquidMl !== null) targetItem.liquidMl = clamp(liquidMl, 0, targetItem.capacityMl);
-    const capacityMl = numberValue(legacyItem.capacityMl);
-    if (targetItem.capacityMl !== undefined && capacityMl !== null && capacityMl > 0) {
-      targetItem.capacityMl = capacityMl;
-      targetItem.liquidMl = clamp(targetItem.liquidMl ?? 0, 0, capacityMl);
+    const capacity = numberValue(state.capacityMl ?? state.capacity ?? state.maxMl);
+    const liquid = numberValue(state.liquidMl ?? state.amountMl ?? state.waterMl ?? state.currentMl ?? state.volumeMl);
+    if (targetItem.capacityMl !== undefined) {
+      if (capacity !== null && capacity > 0) targetItem.capacityMl = capacity;
+      if (liquid !== null) targetItem.liquidMl = clamp(liquid, 0, targetItem.capacityMl);
     }
-    const battery = numberValue(legacyItem.batteryPercent ?? legacyItem.batteryPct ?? legacyItem.chargePercent);
+
+    const battery = numberValue(state.batteryPercent ?? state.batteryPct ?? state.chargePercent ?? state.chargePct ?? state.battery);
     if (getItemDefinition(targetItem.definitionId)?.battery && battery !== null) targetItem.batteryPercent = clamp(battery, 0, 100);
-    const freshness = numberValue(legacyItem.freshnessPercent ?? legacyItem.freshnessPct ?? legacyItem.freshness);
+
+    const freshness = numberValue(state.freshnessPercent ?? state.freshnessPct ?? state.freshness);
     if (getItemDefinition(targetItem.definitionId)?.perishable && freshness !== null) targetItem.freshnessPercent = clamp(freshness, 0, 100);
-    if (typeof legacyItem.examined === 'boolean') targetItem.examined = legacyItem.examined;
-    if (typeof legacyItem.enabled === 'boolean') targetItem.enabled = legacyItem.enabled;
-    const condition = stringValue(legacyItem.condition);
+
+    if (typeof state.examined === 'boolean') targetItem.examined = state.examined;
+    if (typeof source.item.examined === 'boolean') targetItem.examined = source.item.examined;
+    if (typeof state.enabled === 'boolean') targetItem.enabled = state.enabled;
+    const condition = stringValue(state.condition ?? state.status);
     if (condition) targetItem.condition = condition;
   }
 
-  target.player.inventoryIds = Object.values(target.items).filter((item) => item.location.kind === 'inventory').map((item) => item.id);
+  target.player.inventoryIds = Object.values(target.items)
+    .filter((item) => item.location.kind === 'inventory')
+    .map((item) => item.id);
 }
 
 const EFFECT_TYPES = new Set<PersistentEffectType>(['water_puddle', 'smoke', 'fire', 'persistent_noise']);
@@ -315,7 +354,11 @@ export function migrateLegacyPreviewState(raw: unknown): GameState | null {
   return state;
 }
 
-export function loadLegacyPreviewMigration(storage: { getItem(key: string): string | null }): LegacyMigrationResult | null {
+export interface LegacyReadStorage {
+  getItem(key: string): string | null;
+}
+
+export function loadLegacyPreviewMigration(storage: LegacyReadStorage): LegacyMigrationResult | null {
   for (const sourceKey of LEGACY_PREVIEW_SAVE_KEYS) {
     const raw = storage.getItem(sourceKey);
     if (!raw) continue;
