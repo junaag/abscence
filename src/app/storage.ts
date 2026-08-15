@@ -9,6 +9,7 @@ export interface GamePersistence {
   savePreferences(preferences: UiPreferences): boolean;
   loadMapState(): MapUiState;
   saveMapState(state: MapUiState): boolean;
+  hasStorageFailure(): boolean;
 }
 
 class BrowserStorageWriteError extends Error {
@@ -23,12 +24,13 @@ interface GuardedBrowserStorage {
   setItem(key: string, value: string): void;
 }
 
-function createGuardedBrowserStorage(storage: Storage): GuardedBrowserStorage {
+function createGuardedBrowserStorage(storage: Storage, reportFailure: (error: unknown) => void): GuardedBrowserStorage {
   return {
     getItem(key: string): string | null {
       try {
         return storage.getItem(key);
-      } catch {
+      } catch (error: unknown) {
+        reportFailure(error);
         return null;
       }
     },
@@ -36,6 +38,7 @@ function createGuardedBrowserStorage(storage: Storage): GuardedBrowserStorage {
       try {
         storage.setItem(key, value);
       } catch (error: unknown) {
+        reportFailure(error);
         throw new BrowserStorageWriteError(error);
       }
     },
@@ -53,7 +56,7 @@ function persistSafely(operation: () => void): boolean {
   }
 }
 
-function loadGameState(storage: GuardedBrowserStorage): GameState {
+function loadGameState(storage: GuardedBrowserStorage, persist: (operation: () => void) => boolean): GameState {
   if (storage.getItem(SAVE_KEY)) return loadState(storage);
 
   const hasHistoricalCandidate = LEGACY_PREVIEW_SAVE_KEYS.some((key) => storage.getItem(key) !== null);
@@ -62,18 +65,23 @@ function loadGameState(storage: GuardedBrowserStorage): GameState {
   const migration = loadLegacyPreviewMigration(storage);
   if (!migration) return loadState(storage);
 
-  persistSafely(() => saveState(migration.state, storage));
+  persist(() => saveState(migration.state, storage));
   return migration.state;
 }
 
 export function createBrowserPersistence(storage: Storage): GamePersistence {
-  const guardedStorage = createGuardedBrowserStorage(storage);
+  let storageFailure = false;
+  const reportFailure = (): void => { storageFailure = true; };
+  const guardedStorage = createGuardedBrowserStorage(storage, reportFailure);
+  const persist = (operation: () => void): boolean => persistSafely(operation);
+
   return {
-    load: () => loadGameState(guardedStorage),
-    save: (state) => persistSafely(() => saveState(state, guardedStorage)),
+    load: () => loadGameState(guardedStorage, persist),
+    save: (state) => persist(() => saveState(state, guardedStorage)),
     loadPreferences: () => loadUiPreferences(guardedStorage),
-    savePreferences: (preferences) => persistSafely(() => saveUiPreferences(preferences, guardedStorage)),
+    savePreferences: (preferences) => persist(() => saveUiPreferences(preferences, guardedStorage)),
     loadMapState: () => loadMapUiState(guardedStorage),
-    saveMapState: (state) => persistSafely(() => saveMapUiState(state, guardedStorage)),
+    saveMapState: (state) => persist(() => saveMapUiState(state, guardedStorage)),
+    hasStorageFailure: () => storageFailure,
   };
 }
