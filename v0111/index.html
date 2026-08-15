@@ -11,6 +11,8 @@
   let encoded='';
   for(let i=1;i<=4;i++){const r=await fetch(`engine-b64/part-${i}.txt`,{cache:'no-store'});if(!r.ok)throw new Error(`engine part ${i}`);encoded+=await r.text()}
   (0,eval)(await decodeGzipBase64(encoded));
+  const fixResponse=await fetch('gameplay-graph-containers-v0111.js.gz.b64',{cache:'no-store'});if(!fixResponse.ok)throw new Error('gameplay fix');
+  (0,eval)(await decodeGzipBase64(await fixResponse.text()));
   const appResponse=await fetch('app-v0111.js.gz.b64',{cache:'no-store'});if(!appResponse.ok)throw new Error('app');
   (0,eval)(await decodeGzipBase64(await appResponse.text()));
 })().catch(err=>{console.error(err);document.getElementById('app').innerHTML='<main style="padding:16px"><div class="card"><b>Erreur de chargement</b><div class="copy">Le moteur v0.1.11 n’a pas pu être chargé.</div></div></main>'});
