@@ -1,7 +1,7 @@
 import { GAME_VERSION, SAVE_SCHEMA_VERSION } from '../version';
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import { assertValidState, validateState } from './invariants';
-import { loadLegacyPreviewMigration } from './legacy-migration-compat';
+import { loadLegacyPreviewMigration } from './legacy-migration';
 import { ensureLocationEnvironmentState } from './location-environment';
 import { assertValidLocationEnvironmentState, validateLocationEnvironmentState } from './location-environment-validation';
 import type { GameState } from './model';
