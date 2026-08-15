@@ -170,6 +170,11 @@ export type ActionId =
   | 'USE_ITEM'
   | 'CHARGE_ITEM'
   | 'EXAMINE_ITEM'
+  | 'MOP_EFFECT'
+  | 'VENTILATE_EFFECT'
+  | 'DOUSE_EFFECT'
+  | 'SILENCE_EFFECT'
+  | 'STOP_LEAK'
   | 'SHOUT_FOR_WIFE'
   | 'WAIT';
 
