@@ -1,6 +1,6 @@
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import { assertValidState, validateState } from './invariants';
-import { loadLegacyPreviewMigration } from './legacy-migration';
+import { loadLegacyPreviewMigration } from './legacy-migration-compat';
 import type { GameState } from './model';
 import { ensurePhoneState } from './phone';
 import { assertValidPhoneState, validatePhoneState } from './phone-validation';
