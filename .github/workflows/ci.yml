@@ -17,7 +17,8 @@ jobs:
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - run: npm run typecheck
       - run: npm run lint
       - run: npm run test
@@ -31,6 +32,7 @@ jobs:
       - uses: actions/setup-node@v6.4.0
         with:
           node-version: 22
-      - run: npm install --no-audit --no-fund
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
