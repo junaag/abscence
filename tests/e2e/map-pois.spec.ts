@@ -26,8 +26,8 @@ test('nearby OSM POIs load after the map and remain above the fog layer', async 
   await expect(page.locator('[data-poi-category="Services"]')).toHaveCount(2, { timeout: 6000 });
   await expect(page.locator('[data-poi-category="Services publics"]')).toHaveCount(1);
 
-  const servicePaneZ = await page.locator('.leaflet-poiPane-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
-  const fogPaneZ = await page.locator('.leaflet-fogPane-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
+  const servicePaneZ = await page.locator('.leaflet-poi-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
+  const fogPaneZ = await page.locator('.leaflet-fog-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
   expect(servicePaneZ).toBeGreaterThan(fogPaneZ);
 
   await page.locator('.leaflet-marker-icon[title="Station Ingres"]').click();
