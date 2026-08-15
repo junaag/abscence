@@ -19,9 +19,7 @@ describe('persisted save normalization boundary', () => {
   });
 
   it('restores compatible optional v0.2-dev subsystems before validating the state', () => {
-    const input = createInitialState() as ReturnType<typeof createInitialState> & {
-      phone?: ReturnType<typeof createInitialState>['phone'];
-    };
+    const input = structuredClone(createInitialState()) as unknown as Record<string, unknown>;
     delete input.phone;
 
     const normalized = normalizePersistedGameState(input);
