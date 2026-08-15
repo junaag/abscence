@@ -4,6 +4,7 @@ import { WATER_RULES } from '../rules';
 import {
   connectedDestinations,
   hasRunningTap,
+  isElectricityAvailable,
   isItemAccessible,
   looseItemsAtCurrentLocation,
 } from '../selectors';
@@ -72,7 +73,7 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
     }
 
     const electricity = state.infrastructure.electricity;
-    if (definition?.battery?.rechargeable && (item.batteryPercent ?? definition.battery.initialChargePct) < 100 && electricity.available) {
+    if (definition?.battery?.rechargeable && (item.batteryPercent ?? definition.battery.initialChargePct) < 100 && isElectricityAvailable(state)) {
       for (const source of localPowerSources(state)) {
         const powerSource = getItemDefinition(source.definitionId)?.powerSource;
         if (powerSource && electricity.voltagePercent >= powerSource.minimumVoltagePct) {
