@@ -1,11 +1,12 @@
 export { performAction, getContextActions, getContainerActions, getItemActions } from './actions';
 export { addPersistentEffect, activeEffectsAt, advanceWorldEffects, findActiveEffect } from './effects';
-export { applyDueInfrastructureTransitions, isElectricityAvailable, isMobileAvailable, isWaterAvailable, secondsUntilNextInfrastructureTransition } from './infrastructure';
+export { applyDueInfrastructureTransitions, getMobileNetworkState, isElectricityAvailable, isMobileAvailable, isWaterAvailable, secondsUntilNextInfrastructureTransition } from './infrastructure';
 export { assertValidState, validateState } from './invariants';
 export { loadState, saveState, SAVE_KEY } from './persistence';
+export { phoneCalls, phoneDeviceItemId, phoneMessages } from './phone';
 export { environmentPhysiologyModifiers, effectivePhysiologyRates } from './physiology';
 export { connectedDestinations, containerContents, containersAtCurrentLocation, currentLocation, inventoryItems, looseItemsAtCurrentLocation } from './selectors';
 export { createInitialState } from './state';
 export { formatClock } from './time';
 export type { InvariantViolation } from './invariants';
-export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType } from './model';
+export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType, PhoneCallRecord, PhoneMessageRecord, PhoneState } from './model';

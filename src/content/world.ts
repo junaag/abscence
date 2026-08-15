@@ -1,3 +1,4 @@
+import { createInitialPhoneState } from './phone';
 import type { GameState } from '../engine/model';
 
 export const INITIAL_STATE: GameState = {
@@ -55,5 +56,6 @@ export const INITIAL_STATE: GameState = {
     ],
     eventHistory: [],
   },
+  phone: createInitialPhoneState(),
   memory: { shoutedForWife: false, visitedLocationIds: ['bedroom'] },
 };

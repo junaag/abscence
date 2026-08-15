@@ -140,6 +140,27 @@ export interface WorldState {
   eventHistory: WorldEventRecord[];
 }
 
+export interface PhoneCallRecord {
+  id: string;
+  contactName: string;
+  displayTime: string;
+  direction: 'incoming' | 'outgoing' | 'missed';
+}
+
+export interface PhoneMessageRecord {
+  id: string;
+  contactName: string;
+  preview: string;
+  displayTime: string;
+  kind: 'text' | 'photo';
+}
+
+export interface PhoneState {
+  deviceItemId: ItemId;
+  calls: PhoneCallRecord[];
+  messages: PhoneMessageRecord[];
+}
+
 export interface MemoryState {
   shoutedForWife: boolean;
   visitedLocationIds: LocationId[];
@@ -157,6 +178,7 @@ export interface GameState {
   items: Record<ItemId, ItemState>;
   infrastructure: InfrastructureState;
   world: WorldState;
+  phone: PhoneState;
   memory: MemoryState;
 }
 

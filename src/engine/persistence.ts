@@ -1,6 +1,7 @@
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
-import type { GameState } from './model';
 import { assertValidState, validateState } from './invariants';
+import type { GameState } from './model';
+import { ensurePhoneState } from './phone';
 import { createInitialState } from './state';
 
 export const SAVE_KEY = 'absence-v020-dev';
@@ -26,6 +27,7 @@ export function loadState(storage: ReadStorage): GameState {
     const parsed: unknown = JSON.parse(raw);
     if (!isGameState(parsed)) return createInitialState();
     ensureAutonomousInfrastructureTransitions(parsed);
+    ensurePhoneState(parsed);
     return validateState(parsed).length === 0 ? parsed : createInitialState();
   } catch {
     return createInitialState();
