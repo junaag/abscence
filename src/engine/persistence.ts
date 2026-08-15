@@ -1,6 +1,7 @@
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import { assertValidState, validateState } from './invariants';
 import { loadLegacyPreviewMigration } from './legacy-migration-compat';
+import { ensureLocationEnvironmentState } from './location-environment';
 import type { GameState } from './model';
 import { ensurePhoneState } from './phone';
 import { assertValidPhoneState, validatePhoneState } from './phone-validation';
@@ -36,6 +37,7 @@ export function loadState(storage: ReadStorage): GameState {
     ensureAutonomousInfrastructureTransitions(parsed);
     ensureWorldEventSimulationState(parsed);
     ensureWeatherState(parsed);
+    ensureLocationEnvironmentState(parsed);
     ensurePhoneState(parsed);
     return validateState(parsed).length === 0 && validatePhoneState(parsed).length === 0 ? parsed : createInitialState();
   } catch {
