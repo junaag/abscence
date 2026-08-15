@@ -76,6 +76,15 @@ function resolveEffect(effect: PersistentEffect, atSeconds: number, reason = 'na
   effect.resolutionReason = reason;
 }
 
+export function reducePersistentEffect(state: GameState, effectId: string, reduction: number, reason = 'player_action'): PersistentEffect | undefined {
+  const effect = state.world.effects.find((candidate) => candidate.id === effectId && candidate.active);
+  if (!effect) return undefined;
+  effect.intensity = clamp(effect.intensity - Math.max(0, reduction));
+  effect.updatedAtSeconds = state.engine.elapsedSeconds;
+  if (effect.intensity <= 0.1) resolveEffect(effect, state.engine.elapsedSeconds, reason);
+  return effect;
+}
+
 function evolveEffect(state: GameState, effect: PersistentEffect, minutes: number, atSeconds: number, created: string[]): void {
   const location = state.locations[effect.locationId];
   const windowOpen = Boolean(state.world.windowsOpen[effect.locationId]);
@@ -150,12 +159,7 @@ function applyLocalEffects(state: GameState, minutes: number): number {
 }
 
 function recordWorldEvent(state: GameState, type: WorldEventRecord['type'], locationId: string, atSeconds: number): void {
-  state.world.eventHistory.push({
-    id: `world_${state.world.eventHistory.length + 1}`,
-    type,
-    locationId,
-    atSeconds,
-  });
+  state.world.eventHistory.push({ id: `world_${state.world.eventHistory.length + 1}`, type, locationId, atSeconds });
 }
 
 function processScheduledEventsAt(state: GameState, atSeconds: number): string[] {
@@ -206,10 +210,8 @@ export function advanceWorldEffects(state: GameState, seconds: number): EffectAd
       const minutes = stepSeconds / 60;
       current += stepSeconds;
       const activeAtStart = state.world.effects.filter((effect) => effect.active);
-
       for (const effect of activeAtStart) evolveEffect(state, effect, minutes, current, createdEffectIds);
       damageBudgetAdded += applyLocalEffects(state, minutes);
-
       for (const effect of state.world.effects) {
         if (effect.active && effect.intensity <= 0.1) {
           resolveEffect(effect, current);
@@ -217,7 +219,6 @@ export function advanceWorldEffects(state: GameState, seconds: number): EffectAd
         }
       }
     }
-
     startedEventIds.push(...processScheduledEventsAt(state, current));
   }
 
