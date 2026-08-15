@@ -16,15 +16,29 @@ export interface PowerSourceComponent {
   minimumVoltagePct: number;
 }
 
+export interface PerishableComponent {
+  initialFreshnessPercent: number;
+  degradationPercentPerHourAmbient: number;
+}
+
 export interface ItemDefinition {
   id: string;
   name: string;
   battery?: BatteryComponent;
   usable?: UsableComponent;
   powerSource?: PowerSourceComponent;
+  perishable?: PerishableComponent;
 }
 
 export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object.freeze({
+  apple: Object.freeze({
+    id: 'apple',
+    name: 'Pomme',
+    perishable: Object.freeze({
+      initialFreshnessPercent: 94,
+      degradationPercentPerHourAmbient: 0.2,
+    }),
+  }),
   smartphone: Object.freeze({
     id: 'smartphone',
     name: 'Téléphone',

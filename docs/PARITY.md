@@ -6,7 +6,7 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 
 - Santé exprimée en PV 0–100 ; besoins en %.
 - Faim +1 % / 25 min ; soif +1 % / 15 min ; fatigue +1 % / 20 min.
-- Perte de PV critique historique : budget fractionnaire persistant, seuils soif/faim 90/100.
+- Perte de PV critique historique avec budget fractionnaire persistant et seuils faim/soif 90/100.
 - Régression historique : soif 95 %, +30 min → soif 97 %, santé −1 PV.
 - Mort logique à 0 PV.
 - Graphe de lieux canonique ; connexions avec `open`, `locked`, `openSeconds`, `travelSeconds`.
@@ -18,17 +18,21 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Examiner est informatif et n'est pas un verrou d'utilisation.
 - Narratif de lieu dérivé de l'état réel.
 - Sauvegarde v0.2.0 isolée, versionnée et validée par invariants.
-- **Batteries génériques restaurées** : charge persistante, coût d'usage, drain passif, extinction à 0 %.
+- Batteries génériques : charge persistante, coût d'usage, drain passif, extinction à 0 %.
 - Téléphone : 78 % initial, −0,03 % par usage, recharge 2 %/min.
 - Lampe : 64 % initial, −0,02 % par usage, −0,25 %/min lorsqu'elle est allumée.
-- Source électrique générique et recharge statique selon disponibilité/tension actuelle.
+- Source électrique générique et recharge selon disponibilité/tension actuelle.
+- **Fraîcheur persistante des périssables** : pomme 94 % initial, base 0,2 point/h.
+- **Courbe thermique historique de dégradation** restaurée de ≤4 °C à >40 °C.
+- **Réfrigérateur comme contrôleur thermique générique** : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
+- Température de stockage calculée depuis l'emplacement réel de l'objet (lieu, inventaire ou contenant).
 
 ## À migrer avant promotion
 
+- Multiplicateur réfrigéré historique additionnel `0,25` : valeur connue mais combinaison exacte avec la courbe thermique à revérifier dans la source historique avant activation.
 - Modificateurs de physiologie liés à la température/météo.
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
 - Interruption de recharge pendant une transition autonome du réseau électrique.
-- Périssables / réfrigération.
 - Réseaux eau / électricité / mobile autonomes et déterministes.
 - Événements autonomes avec seed.
 - Perception auditive / visuelle / olfactive à distance.

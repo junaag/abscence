@@ -25,7 +25,6 @@ export interface WorldClock {
 }
 
 export interface EngineSimulationState {
-  /** Fractional PV accumulated by critical needs, carried between time advances. */
   damageBudgetPv: number;
 }
 
@@ -37,6 +36,7 @@ export interface LocationFeatures {
 export interface LocationState {
   id: LocationId;
   name: string;
+  ambientTemperatureC: number;
   features: LocationFeatures;
 }
 
@@ -53,6 +53,7 @@ export interface ConnectionState {
 
 export interface ContainerState {
   id: ContainerId;
+  definitionId: string;
   name: string;
   locationId: LocationId;
   open: boolean;
@@ -75,23 +76,15 @@ export interface ItemState {
   liquidMl?: number;
   capacityMl?: number;
   batteryPercent?: number;
+  freshnessPercent?: number;
   enabled?: boolean;
   condition?: string;
 }
 
 export interface InfrastructureState {
-  water: {
-    available: boolean;
-    pressure: number;
-  };
-  electricity: {
-    available: boolean;
-    voltagePercent: number;
-  };
-  mobile: {
-    available: boolean;
-    signal: number;
-  };
+  water: { available: boolean; pressure: number };
+  electricity: { available: boolean; voltagePercent: number };
+  mobile: { available: boolean; signal: number };
 }
 
 export interface MemoryState {
