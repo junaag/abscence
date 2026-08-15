@@ -68,7 +68,8 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
 
   const actions: ActionOption[] = [];
   const inInventory = item.location.kind === 'inventory';
-  if (!inInventory) actions.push({ id: 'TAKE_ITEM', targetId: itemId, label: 'Prendre' });
+  const definition = getItemDefinition(item.definitionId);
+  if (!inInventory && definition?.portable !== false) actions.push({ id: 'TAKE_ITEM', targetId: itemId, label: 'Prendre' });
 
   if (inInventory) {
     if (itemKind(item) === 'food') actions.push({ id: 'EAT_ITEM', targetId: itemId, label: 'Manger' });
@@ -81,7 +82,6 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
       if (hasRunningTap(state) && capacityMl > liquidMl) actions.push({ id: 'FILL_LIQUID_CONTAINER', targetId: itemId, label: 'Remplir au robinet', detail: `${liquidMl}/${capacityMl} ml` });
     }
 
-    const definition = getItemDefinition(item.definitionId);
     if (definition?.usable && (!definition.battery || (item.batteryPercent ?? definition.battery.initialChargePct) > 0)) {
       const label = definition.usable.toggleEnabled ? (item.enabled ? 'Éteindre' : 'Allumer') : 'Utiliser';
       const option: ActionOption = { id: 'USE_ITEM', targetId: itemId, label };
