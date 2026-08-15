@@ -1,3 +1,4 @@
+import { GAME_VERSION, SAVE_SCHEMA_VERSION } from '../version';
 import { ensureAutonomousInfrastructureTransitions } from './infrastructure';
 import { assertValidState, validateState } from './invariants';
 import { loadLegacyPreviewMigration } from './legacy-migration-compat';
@@ -20,10 +21,16 @@ export interface WriteStorage {
   setItem(key: string, value: string): void;
 }
 
-function isGameState(value: unknown): value is GameState {
+function isCompatibleGameState(value: unknown): value is GameState {
   if (!value || typeof value !== 'object') return false;
   const state = value as Partial<GameState>;
-  return state.schemaVersion === 1 && state.gameVersion === '0.2.0-dev' && Boolean(state.player) && Boolean(state.locations) && Boolean(state.connections) && Boolean(state.containers) && Boolean(state.items);
+  return state.schemaVersion === SAVE_SCHEMA_VERSION
+    && typeof state.gameVersion === 'string'
+    && Boolean(state.player)
+    && Boolean(state.locations)
+    && Boolean(state.connections)
+    && Boolean(state.containers)
+    && Boolean(state.items);
 }
 
 export function loadState(storage: ReadStorage): GameState {
@@ -34,18 +41,18 @@ export function loadState(storage: ReadStorage): GameState {
   }
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!isGameState(parsed)) return createInitialState();
+    if (!isCompatibleGameState(parsed)) return createInitialState();
     if (validateLocationEnvironmentState(parsed).length > 0) return createInitialState();
     ensureAutonomousInfrastructureTransitions(parsed);
     ensureWorldEventSimulationState(parsed);
     ensureWeatherState(parsed);
     ensureLocationEnvironmentState(parsed);
     ensurePhoneState(parsed);
-    return validateState(parsed).length === 0
-      && validateLocationEnvironmentState(parsed).length === 0
-      && validatePhoneState(parsed).length === 0
-      ? parsed
-      : createInitialState();
+    if (validateState(parsed).length > 0
+      || validateLocationEnvironmentState(parsed).length > 0
+      || validatePhoneState(parsed).length > 0) return createInitialState();
+    parsed.gameVersion = GAME_VERSION;
+    return parsed;
   } catch {
     return createInitialState();
   }
@@ -55,5 +62,8 @@ export function saveState(state: GameState, storage: WriteStorage): void {
   assertValidState(state);
   assertValidLocationEnvironmentState(state);
   assertValidPhoneState(state);
-  storage.setItem(SAVE_KEY, JSON.stringify(state));
+  const persisted = structuredClone(state);
+  persisted.schemaVersion = SAVE_SCHEMA_VERSION;
+  persisted.gameVersion = GAME_VERSION;
+  storage.setItem(SAVE_KEY, JSON.stringify(persisted));
 }
