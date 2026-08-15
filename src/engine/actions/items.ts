@@ -122,13 +122,19 @@ export function chargeItem(state: GameState, itemId: string | undefined, sourceI
 export function examineItem(state: GameState, itemId: string | undefined): EngineTransition {
   if (!itemId || !isItemAccessible(state, itemId)) return failure(state, 'Impossible', 'Cet objet n’est pas accessible.');
   const item = state.items[itemId]; if (!item) return failure(state, 'Impossible', 'Cet objet n’existe plus.');
+  const definition = getItemDefinition(item.definitionId);
   const next = cloneState(state); const nextItem = next.items[itemId]; if (!nextItem) return failure(state, 'Impossible', 'Cet objet n’existe plus.');
   nextItem.examined = true; advanceTime(next, 8);
+
   const details: string[] = [];
+  if (definition?.inspection?.role) details.push(definition.inspection.role);
+  if (definition?.inspection?.operation) details.push(definition.inspection.operation);
   if (nextItem.condition) details.push(`État : ${nextItem.condition}.`);
   if (nextItem.freshnessPercent !== undefined) details.push(`Fraîcheur : ${nextItem.freshnessPercent.toFixed(1)} %.`);
-  if (nextItem.capacityMl !== undefined) details.push(`Contenance : ${nextItem.liquidMl ?? 0}/${nextItem.capacityMl} ml.`);
+  if (nextItem.capacityMl !== undefined) details.push(`Contenu actuel : ${nextItem.liquidMl ?? 0}/${nextItem.capacityMl} ml.`);
   if (nextItem.batteryPercent !== undefined) details.push(`Batterie : ${nextItem.batteryPercent.toFixed(1)} %.`);
-  if (details.length === 0) details.push('Rien d’anormal ne ressort de cet examen.');
+  if (nextItem.enabled !== undefined) details.push(`Fonctionnement actuel : ${nextItem.enabled ? 'allumé' : 'éteint'}.`);
+  if (details.length === 0) details.push('Rien d’anormal ne ressort de cet examen et son utilité n’est pas encore évidente.');
+
   return success(next, `Vous examinez ${item.name.toLowerCase()}.`, details.join(' '), 8);
 }
