@@ -85,10 +85,16 @@ export interface ItemState {
   condition?: string;
 }
 
+export type InfrastructureTransitionState =
+  | { id: string; network: 'electricity'; atSeconds: number; processed: boolean; available: boolean; voltagePercent?: number }
+  | { id: string; network: 'water'; atSeconds: number; processed: boolean; available: boolean; pressure?: number }
+  | { id: string; network: 'mobile'; atSeconds: number; processed: boolean; available: boolean; signal?: number };
+
 export interface InfrastructureState {
   water: { available: boolean; pressure: number };
   electricity: { available: boolean; voltagePercent: number };
   mobile: { available: boolean; signal: number };
+  transitions?: InfrastructureTransitionState[];
 }
 
 export type PersistentEffectType = 'water_puddle' | 'smoke' | 'fire' | 'persistent_noise';
