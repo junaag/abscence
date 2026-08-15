@@ -8,7 +8,8 @@
   },
   "scripts": {
     "dev": "vite --host 0.0.0.0",
-    "build": "npm run integrity && tsc --noEmit && vite build && npm run budget",
+    "build": "npm run integrity && npm run typecheck && npm run build:bundle",
+    "build:bundle": "vite build && npm run budget",
     "budget": "node scripts/check-build-budget.mjs",
     "integrity": "node scripts/check-source-integrity.mjs",
     "typecheck": "tsc --noEmit",
@@ -16,7 +17,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lint": "eslint src tests scripts vite.config.ts playwright.config.ts",
-    "ci": "npm run integrity && npm run typecheck && npm run lint && npm run test && npm run build"
+    "ci": "npm run integrity && npm run typecheck && npm run lint && npm run test && npm run build:bundle"
   },
   "dependencies": {
     "leaflet": "1.9.4"
