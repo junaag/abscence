@@ -50,6 +50,10 @@ export function isItemAccessible(state: GameState, itemId: string): boolean {
   return false;
 }
 
+export function isElectricityAvailable(state: GameState): boolean {
+  return state.infrastructure.electricity.available && state.infrastructure.electricity.voltagePercent > 0;
+}
+
 export function hasRunningTap(state: GameState): boolean {
   return Boolean(currentLocation(state).features.tap && state.infrastructure.water.available);
 }
