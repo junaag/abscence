@@ -22,9 +22,7 @@ describe('temporary v0.1.11 engine-state diagnostic', () => {
       .map((name) => readFileSync(`${directory}/${name}`, 'utf8').trim())
       .join('');
     const source = gunzipSync(Buffer.from(encoded, 'base64')).toString('utf8');
-    const context: Record<string, unknown> = {};
-    runInNewContext(`${source}\n;globalThis.__absenceEngineDiagnostic = globalThis.AbsenceEngine;`, context, { timeout: 1000 });
-    const engine = context.__absenceEngineDiagnostic as { VERSION?: unknown; freshState?: () => unknown; ensureState?: (value: unknown) => unknown } | undefined;
+    const engine = runInNewContext(`${source}\n;globalThis.AbsenceEngine;`, {}, { timeout: 1000 }) as { VERSION?: unknown; freshState?: () => unknown; ensureState?: (value: unknown) => unknown } | undefined;
     if (!engine?.freshState) throw new Error('V0111_ENGINE_EXPORT_MISSING=' + snippet(source, 'AbsenceEngine'));
     const freshState = engine.freshState();
     throw new Error('V0111_ENGINE_CONTRACT=' + JSON.stringify({
