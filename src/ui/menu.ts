@@ -1,4 +1,5 @@
 import type { UiPreferences } from '../app/preferences';
+import { GAME_VERSION } from '../version';
 
 export type MenuPanel = 'menu' | 'settings' | 'about' | null;
 
@@ -17,7 +18,7 @@ export function menuOverlay(panel: MenuPanel, preferences: UiPreferences): strin
     return shell('Paramètres', 'Préférences de l’application', `<div class="settings-list"><button type="button" class="settings-row" data-toggle-sound role="switch" aria-checked="${preferences.soundEnabled}"><div><div class="row-title">Son</div><div class="row-sub">Effets sonores et ambiance du jeu.</div></div><span class="settings-value" data-testid="sound-setting">${status}</span></button></div>`, true);
   }
   if (panel === 'about') {
-    return shell('À propos', 'ABSENCE · v0.2.0-dev', '<div class="about-copy"><p>Jeu de survie mobile centré sur un monde soudainement vidé de toute présence humaine.</p><p>Création : Julien Imbert.</p><p>Cette version est une refonte technique en cours et ne remplace pas encore la version stable.</p></div>', true);
+    return shell('À propos', `ABSENCE · v${GAME_VERSION}`, '<div class="about-copy"><p>Jeu de survie mobile centré sur un monde soudainement vidé de toute présence humaine.</p><p>Création : Julien Imbert.</p><p>Cette version est une refonte technique en cours et ne remplace pas encore la version stable.</p></div>', true);
   }
-  return shell('Menu', 'ABSENCE · v0.2.0-dev', `<div class="section-title">Navigation</div>${menuButton('Accueil','Revenir à la situation actuelle.','data-menu-home')}${menuButton('Paramètres','Son et préférences de l’application.','data-open-settings')}${menuButton('À propos','Version, projet et créateur.','data-open-about')}`);
+  return shell('Menu', `ABSENCE · v${GAME_VERSION}`, `<div class="section-title">Navigation</div>${menuButton('Accueil','Revenir à la situation actuelle.','data-menu-home')}${menuButton('Paramètres','Son et préférences de l’application.','data-open-settings')}${menuButton('À propos','Version, projet et créateur.','data-open-about')}`);
 }
