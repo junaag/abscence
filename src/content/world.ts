@@ -4,7 +4,7 @@ export const INITIAL_STATE: GameState = {
   schemaVersion: 1,
   gameVersion: '0.2.0-dev',
   clock: { day: 1, secondOfDay: 7 * 3600 + 12 * 60 },
-  engine: { damageBudgetPv: 0 },
+  engine: { damageBudgetPv: 0, elapsedSeconds: 0, nextEffectId: 1 },
   player: {
     locationId: 'bedroom',
     healthPv: 100,
@@ -13,9 +13,9 @@ export const INITIAL_STATE: GameState = {
     alive: true,
   },
   locations: {
-    bedroom: { id: 'bedroom', name: 'Chambre', ambientTemperatureC: 20, ambientHumidityPercent: 50, features: {} },
-    kitchen: { id: 'kitchen', name: 'Cuisine', ambientTemperatureC: 20, ambientHumidityPercent: 50, features: { tap: true, powerOutlet: true } },
-    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, ambientHumidityPercent: 50, features: {} },
+    bedroom: { id: 'bedroom', name: 'Chambre', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.15, features: {} },
+    kitchen: { id: 'kitchen', name: 'Cuisine', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.18, features: { tap: true, powerOutlet: true } },
+    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 1, features: {} },
   },
   connections: {
     bedroom_kitchen: { id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', type: 'door', open: true, locked: false, openSeconds: 2, travelSeconds: 12 },
@@ -37,5 +37,6 @@ export const INITIAL_STATE: GameState = {
     electricity: { available: true, voltagePercent: 100 },
     mobile: { available: true, signal: 3 },
   },
+  world: { effects: [], windowsOpen: { bedroom: false, kitchen: false }, leakActive: false },
   memory: { shoutedForWife: false, visitedLocationIds: ['bedroom'] },
 };

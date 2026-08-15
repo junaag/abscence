@@ -28,6 +28,9 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Courbe thermique historique de dégradation restaurée de ≤4 °C à >40 °C.
 - Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
 - Température de stockage calculée depuis l'emplacement réel de l'objet.
+- **Effets persistants historiques restaurés** : eau au sol, fumée, feu et bruit continu avec intensité persistante, croissance/décroissance, propagation par connexions ouvertes, ventilation et fenêtre pour la fumée.
+- Impacts locaux des effets restaurés : stress, douleur et budget de dégâts PV pour fumée/feu dangereux.
+- Narratif local enrichi à partir des effets réellement actifs dans le lieu.
 
 ## À migrer avant promotion
 
@@ -37,7 +40,7 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Réseaux eau / électricité / mobile autonomes et déterministes.
 - Événements autonomes avec seed.
 - Perception auditive / visuelle / olfactive à distance.
-- Effets persistants : eau, fumée, feu, bruit.
+- Actions de mitigation des effets persistants : éponger, ventiler, éteindre un feu, stopper une fuite/source de bruit.
 - Téléphone / messages.
 - Carte Leaflet + fog of war géographique persistant.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.

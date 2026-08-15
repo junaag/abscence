@@ -26,6 +26,8 @@ export interface WorldClock {
 
 export interface EngineSimulationState {
   damageBudgetPv: number;
+  elapsedSeconds: number;
+  nextEffectId: number;
 }
 
 export interface LocationFeatures {
@@ -38,6 +40,7 @@ export interface LocationState {
   name: string;
   ambientTemperatureC: number;
   ambientHumidityPercent: number;
+  ventilation: number;
   features: LocationFeatures;
 }
 
@@ -88,6 +91,28 @@ export interface InfrastructureState {
   mobile: { available: boolean; signal: number };
 }
 
+export type PersistentEffectType = 'water_puddle' | 'smoke' | 'fire' | 'persistent_noise';
+
+export interface PersistentEffect {
+  id: string;
+  type: PersistentEffectType;
+  locationId: LocationId;
+  intensity: number;
+  active: boolean;
+  source?: string;
+  spreading: boolean;
+  createdAtSeconds: number;
+  updatedAtSeconds: number;
+  resolvedAtSeconds?: number;
+  resolutionReason?: string;
+}
+
+export interface WorldState {
+  effects: PersistentEffect[];
+  windowsOpen: Record<LocationId, boolean>;
+  leakActive: boolean;
+}
+
 export interface MemoryState {
   shoutedForWife: boolean;
   visitedLocationIds: LocationId[];
@@ -104,6 +129,7 @@ export interface GameState {
   containers: Record<ContainerId, ContainerState>;
   items: Record<ItemId, ItemState>;
   infrastructure: InfrastructureState;
+  world: WorldState;
   memory: MemoryState;
 }
 
