@@ -36,6 +36,7 @@ export const INITIAL_STATE: GameState = {
     water: { available: true, pressure: 1 },
     electricity: { available: true, voltagePercent: 100 },
     mobile: { available: true, signal: 3 },
+    transitions: [],
   },
   world: {
     effects: [],

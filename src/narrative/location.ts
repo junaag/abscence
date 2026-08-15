@@ -1,4 +1,5 @@
 import { activeEffectsAt } from '../engine/effects';
+import { isElectricityAvailable, isWaterAvailable } from '../engine/infrastructure';
 import type { GameState, ItemState, PersistentEffect } from '../engine/model';
 import { currentLocation, looseItemsAtCurrentLocation } from '../engine/selectors';
 
@@ -30,9 +31,9 @@ export function describeCurrentLocation(state: GameState): string {
     base = state.memory.shoutedForWife ? `${first} Vous avez appelé votre épouse, sans obtenir la moindre réponse.` : `${first} Le silence est suffisamment inhabituel pour attirer votre attention.`;
   } else if (location.id === 'kitchen') {
     const parts: string[] = [];
-    parts.push(state.infrastructure.electricity.available ? 'Le réfrigérateur ronronne encore.' : 'Le réfrigérateur est silencieux : le courant est coupé.');
+    parts.push(isElectricityAvailable(state) ? 'Le réfrigérateur ronronne encore.' : 'Le réfrigérateur est silencieux : le courant est coupé.');
     parts.push(items.length > 0 ? `À portée de main : ${joinFrench(items)}.` : 'Le plan de travail est presque vide.');
-    parts.push(state.infrastructure.water.available ? 'Le robinet fonctionne encore.' : 'Lorsque vous ouvrez le robinet, rien ne coule.');
+    parts.push(isWaterAvailable(state) ? 'Le robinet fonctionne encore.' : 'Lorsque vous ouvrez le robinet, rien ne coule.');
     base = parts.join(' ');
   } else if (location.id === 'garden') {
     base = 'Le jardin est calme. Aucun mouvement humain, aucune voix, aucun moteur au loin.';

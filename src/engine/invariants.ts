@@ -16,6 +16,19 @@ export function validateState(state: GameState): InvariantViolation[] {
   for (const [key, value] of Object.entries(state.player.needs) as Array<[keyof NeedsState, number]>) if (!isPercent(value)) errors.push(violation('NEED_OUT_OF_RANGE', `${key} must stay between 0 and 100, got ${value}.`));
   if (!isPercent(state.infrastructure.water.pressure * 100)) errors.push(violation('WATER_PRESSURE_INVALID', 'Water pressure must stay between 0 and 1.'));
   if (!isPercent(state.infrastructure.electricity.voltagePercent)) errors.push(violation('VOLTAGE_INVALID', 'Electricity voltage must stay between 0 and 100 %.'));
+  if (!Number.isFinite(state.infrastructure.mobile.signal) || state.infrastructure.mobile.signal < 0 || state.infrastructure.mobile.signal > 4) errors.push(violation('MOBILE_SIGNAL_INVALID', 'Mobile signal must stay between 0 and 4.'));
+
+  const infrastructureTransitionIds = new Set<string>();
+  for (const transition of state.infrastructure.transitions ?? []) {
+    if (infrastructureTransitionIds.has(transition.id)) errors.push(violation('INFRA_TRANSITION_DUPLICATE_ID', `Infrastructure transition id ${transition.id} is duplicated.`));
+    infrastructureTransitionIds.add(transition.id);
+    if (!Number.isFinite(transition.atSeconds) || transition.atSeconds < 0) errors.push(violation('INFRA_TRANSITION_TIME_INVALID', `${transition.id} has invalid atSeconds.`));
+    if (typeof transition.available !== 'boolean') errors.push(violation('INFRA_TRANSITION_AVAILABLE_INVALID', `${transition.id} has invalid availability.`));
+    if (transition.processed && transition.atSeconds > state.engine.elapsedSeconds) errors.push(violation('INFRA_TRANSITION_PROCESSED_EARLY', `${transition.id} is marked processed before its scheduled time.`));
+    if (transition.network === 'electricity' && transition.voltagePercent !== undefined && !isPercent(transition.voltagePercent)) errors.push(violation('INFRA_TRANSITION_VOLTAGE_INVALID', `${transition.id} has invalid voltage.`));
+    if (transition.network === 'water' && transition.pressure !== undefined && (!Number.isFinite(transition.pressure) || transition.pressure < 0 || transition.pressure > 1)) errors.push(violation('INFRA_TRANSITION_PRESSURE_INVALID', `${transition.id} has invalid pressure.`));
+    if (transition.network === 'mobile' && transition.signal !== undefined && (!Number.isFinite(transition.signal) || transition.signal < 0 || transition.signal > 4)) errors.push(violation('INFRA_TRANSITION_SIGNAL_INVALID', `${transition.id} has invalid signal.`));
+  }
 
   for (const location of Object.values(state.locations)) {
     if (!Number.isFinite(location.ambientTemperatureC)) errors.push(violation('LOCATION_TEMPERATURE_INVALID', `${location.id} has an invalid ambient temperature.`));

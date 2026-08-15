@@ -1,5 +1,6 @@
 import { getContainerDefinition } from '../content/containers';
 import { getItemDefinition } from '../content/items';
+import { isElectricityAvailable } from './infrastructure';
 import type { GameState, ItemState, LocationId } from './model';
 
 export interface PerishableChange {
@@ -42,7 +43,7 @@ function containerTemperature(state: GameState, containerId: string): number | u
   const controller = getContainerDefinition(container.definitionId)?.environmentController;
   if (!controller) return ambient;
   const electricity = state.infrastructure.electricity;
-  if (!electricity.available || electricity.voltagePercent < controller.minimumVoltagePercent) return ambient;
+  if (!isElectricityAvailable(state) || electricity.voltagePercent < controller.minimumVoltagePercent) return ambient;
   return controller.targetTemperatureC;
 }
 
