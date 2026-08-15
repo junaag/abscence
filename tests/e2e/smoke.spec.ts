@@ -30,7 +30,7 @@ test('phone restores local calls and messages with engine battery and network st
   await expect(page.getByText('« ok papa » · hier 17:48')).toBeVisible();
   await expect(page.getByText('Photo · hier 17:31')).toBeVisible();
 
-  await page.getByRole('button', { name: /Accueil/ }).click();
+  await page.getByRole('button', { name: '‹ Accueil', exact: true }).click();
   await page.getByRole('button', { name: 'Appels' }).click();
   await expect(page.getByText('Dernier appel hier · 22:41')).toBeVisible();
   await expect(page.getByText('Hier · 18:12')).toBeVisible();
