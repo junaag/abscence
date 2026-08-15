@@ -81,9 +81,9 @@ export function createWorldEventSource(
     sensory: null,
     metadata: {},
     ...structuredClone(overrides),
-    id,
-    definitionId,
   };
+  source.id = id;
+  source.definitionId = definitionId;
 
   source.position = normalizePosition(source.position);
   source.probability = clamp(source.probability, 0, 1);
