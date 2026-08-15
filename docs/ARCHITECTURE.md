@@ -12,7 +12,7 @@
 8. **Une mécanique = spécification + tests moteur + intégration UI + smoke E2E.**
 9. **Les actions sont découpées par domaine.** Le dispatcher central route vers mouvement, contenants, objets et monde ; il ne contient pas les règles métier de ces domaines.
 10. **Le moteur est runtime-agnostique.** Il ne dépend ni du DOM, ni de `window`, ni de `localStorage`; ces dépendances sont injectées depuis `src/app`.
-11. **Les frontières d'import sont exécutables.** ESLint bloque moteur → UI et bloque l'UI qui contourne la façade publique du moteur.
+11. **Les frontières d'import sont exécutables.** ESLint bloque moteur → UI et interdit à `src/ui` tout import direct depuis `src/engine`; la présentation passe exclusivement par `src/app/game-api.ts`.
 12. **Chaque action est transactionnelle.** `performAction` valide l'état entrant et sortant. Une réussite doit produire un nouvel état valide ; un échec doit rendre exactement l'état d'entrée.
 13. **Les sauvegardes sont validées avant écriture et avant normalisation destructive.** Un champ manquant d'une ancienne version peut être complété ; une valeur explicitement corrompue doit être rejetée, pas réparée silencieusement.
 14. **Une seule source thermique.** La météo mondiale décrit l'extérieur ; les lieux dérivent leur température via `location-environment`. Physiologie et conservation utilisent les mêmes sélecteurs.
@@ -24,6 +24,8 @@
 Browser adapters (storage, map, préférences)
    ↓
 Application
+   ↓
+src/app/game-api.ts (surface de présentation réduite)
    ↓
 UI interaction
    ↓
@@ -38,11 +40,12 @@ GameState suivant + ActionResult
    ↓
 application persistence adapter
    ↓
-render(state)
+presentation pure → render
 ```
 
 ## Découpage
 
+- `src/app/game-api.ts` : surface gameplay autorisée à la présentation ; ne réexporte pas les helpers de simulation/admin du moteur.
 - `src/app` : composition des dépendances navigateur, stockage, préférences et état UI de carte.
 - `src/engine/actions/availability.ts` : déduction des actions disponibles.
 - `src/engine/actions/movement.ts` : déplacements et passages.
@@ -54,7 +57,8 @@ render(state)
 - `src/engine/*-validation.ts` : validation des sous-systèmes persistés avant leur usage.
 - `src/content` : données de jeu sans logique DOM.
 - `src/narrative` : texte calculé depuis l'état.
-- `src/ui` : rendu et interactions, sans mutation gameplay directe.
+- `src/ui/presentation.ts` : HTML pur dérivé de l'état et des sélecteurs autorisés.
+- `src/ui/render.ts` : contrôleur DOM/navigation ; transforme l'intention utilisateur en `GameAction` et ne contient pas de règle métier.
 - `tests/engine` : règles unitaires et contrats structurels.
 - `tests/integration` : scénarios de jeu complets.
 - `tests/e2e` : parcours navigateur mobile réel.
@@ -74,6 +78,8 @@ Les seeds moteur font partie de l'état persistant. Le résultat métier ne doit
 - l'ancienne clé historique est conservée pour diagnostic/rollback ;
 - une donnée historique corrompue n'est jamais promue en sauvegarde v0.2 ;
 - les tests de migration utilisent le vrai moteur v0.1.11 compressé présent dans le dépôt, pas uniquement un fixture réécrit à la main.
+
+La migration historique ne suppose pas que les identifiants internes soient identiques entre versions. Les alias connus et l'état mutable imbriqué sont traduits vers les concepts canoniques v0.2 avant validation.
 
 ## Environnement canonique
 
