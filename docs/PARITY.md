@@ -33,6 +33,8 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Effets persistants historiques restaurés** : eau au sol, fumée, feu et bruit continu avec intensité persistante, croissance/décroissance, propagation par connexions ouvertes, ventilation et fenêtre pour la fumée.
 - Impacts locaux des effets restaurés : stress, douleur et budget de dégâts PV pour fumée/feu dangereux.
 - Narratif local enrichi à partir des effets réellement actifs dans le lieu.
+- **Mitigation historique des effets restaurée** : éponger avec un torchon (−38, 150 s), ventiler la fumée (−18, 20 s), utiliser 250 ml d’eau sur un feu (−48, 15 s), neutraliser un bruit continu (−100, 25 s) et stopper une fuite (18 s).
+- Les actions de mitigation sont générées par le moteur à partir des effets locaux et lient explicitement les ressources transportées nécessaires.
 - **Événements historiques déterministes restaurés aux instants exacts** : bruit continu dans la cuisine à 5 min, fuite d'eau à 12 min, fumée dans le jardin à 25 min, sans duplication lors des avances de temps suivantes.
 - CI reproductible : Node 22, `package-lock.json`, `npm ci`, TypeScript strict, ESLint, Vitest, build Vite et smoke Playwright mobile Pixel 7.
 
@@ -43,7 +45,6 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Génération autonome/seedée des évolutions de réseaux au-delà des transitions déterministes déjà supportées par le moteur.
 - Événements autonomes procéduraux avec seed au-delà des trois événements historiques fixes déjà restaurés.
 - Perception auditive / visuelle / olfactive à distance.
-- Actions de mitigation des effets persistants : éponger, ventiler, éteindre un feu, stopper une fuite/source de bruit.
 - Téléphone / messages.
 - Carte Leaflet + fog of war géographique persistant.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
