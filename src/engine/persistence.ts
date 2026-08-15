@@ -1,4 +1,5 @@
 import type { GameState } from './model';
+import { assertValidState, validateState } from './invariants';
 import { createInitialState } from './state';
 
 export const SAVE_KEY = 'absence-v020-dev';
@@ -14,12 +15,14 @@ export function loadState(storage: Pick<Storage, 'getItem'> = localStorage): Gam
   if (!raw) return createInitialState();
   try {
     const parsed: unknown = JSON.parse(raw);
-    return isGameState(parsed) ? parsed : createInitialState();
+    if (!isGameState(parsed)) return createInitialState();
+    return validateState(parsed).length === 0 ? parsed : createInitialState();
   } catch {
     return createInitialState();
   }
 }
 
 export function saveState(state: GameState, storage: Pick<Storage, 'setItem'> = localStorage): void {
+  assertValidState(state);
   storage.setItem(SAVE_KEY, JSON.stringify(state));
 }
