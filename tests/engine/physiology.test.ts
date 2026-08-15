@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { getLocationTemperatureC, setLocationEnvironment } from '../../src/engine/location-environment';
 import { environmentPhysiologyModifiers, effectivePhysiologyRates } from '../../src/engine/physiology';
 import { createInitialState } from '../../src/engine/state';
 import { advanceTime } from '../../src/engine/time';
+import { setWeatherState } from '../../src/engine/weather';
 
 describe('physiology parity with historical engine v0.1.8', () => {
-  it('keeps historical base rates in neutral 20C / 50% humidity conditions', () => {
+  it('derives the default indoor temperature from historical 23C weather minus 2C', () => {
     const state = createInitialState();
+    expect(getLocationTemperatureC(state, 'bedroom')).toBe(21);
     const rates = effectivePhysiologyRates(state).rates;
     expect(rates.hunger).toBeCloseTo(1 / 25, 8);
     expect(rates.thirst).toBeCloseTo(1 / 15, 8);
@@ -36,12 +39,32 @@ describe('physiology parity with historical engine v0.1.8', () => {
     expect(modifiers.fatigueMultiplier).toBeCloseTo(1.35, 6);
   });
 
-  it('uses current location environment to accelerate thirst and fatigue', () => {
+  it('uses outdoor weather directly for the garden', () => {
     const state = createInitialState();
-    const bedroom = state.locations.bedroom;
-    if (!bedroom) throw new Error('missing bedroom');
-    bedroom.ambientTemperatureC = 32;
-    bedroom.ambientHumidityPercent = 70;
+    state.player.locationId = 'garden';
+    setWeatherState(state, { temperatureC: 36, humidityPct: 55 });
+    expect(getLocationTemperatureC(state, 'garden')).toBe(36);
+    const before = { ...state.player.needs };
+    advanceTime(state, 60 * 60);
+    expect(state.player.needs.thirst - before.thirst).toBeCloseTo((1 / 15) * 1.5 * 60, 5);
+    expect(state.player.needs.fatigue - before.fatigue).toBeCloseTo((1 / 20) * 1.18 * 60, 5);
+  });
+
+  it('lets an indoor fixed temperature shield the player from outdoor heat', () => {
+    const state = createInitialState();
+    setLocationEnvironment(state, 'bedroom', { type: 'indoor', temperatureC: 22 });
+    setWeatherState(state, { temperatureC: 36, humidityPct: 80 });
+    expect(getLocationTemperatureC(state, 'bedroom')).toBe(22);
+    const before = { ...state.player.needs };
+    advanceTime(state, 60 * 60);
+    expect(state.player.needs.thirst - before.thirst).toBeCloseTo((1 / 15) * 60, 5);
+    expect(state.player.needs.fatigue - before.fatigue).toBeCloseTo((1 / 20) * 60, 5);
+  });
+
+  it('uses weather humidity with the local indoor temperature', () => {
+    const state = createInitialState();
+    setLocationEnvironment(state, 'bedroom', { type: 'indoor', temperatureC: 32 });
+    setWeatherState(state, { temperatureC: 40, humidityPct: 70 });
     const before = { ...state.player.needs };
     advanceTime(state, 60 * 60);
     expect(state.player.needs.thirst - before.thirst).toBeCloseTo((1 / 15) * 1.35 * 60, 5);
@@ -65,10 +88,8 @@ describe('physiology parity with historical engine v0.1.8', () => {
     const hot = createInitialState();
     neutral.player.needs.thirst = 88.5;
     hot.player.needs.thirst = 88.5;
-    const hotBedroom = hot.locations.bedroom;
-    if (!hotBedroom) throw new Error('missing bedroom');
-    hotBedroom.ambientTemperatureC = 40;
-    hotBedroom.ambientHumidityPercent = 100;
+    setLocationEnvironment(hot, 'bedroom', { type: 'indoor', temperatureC: 40 });
+    setWeatherState(hot, { humidityPct: 100 });
     advanceTime(neutral, 45 * 60);
     advanceTime(hot, 45 * 60);
     expect(neutral.player.healthPv).toBe(100);
