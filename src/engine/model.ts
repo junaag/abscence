@@ -139,7 +139,7 @@ export interface GameAction {
 export interface ActionOption {
   id: ActionId;
   label: string;
-  detail?: string;
+  detail?: string | undefined;
   targetId?: string;
   sourceId?: string;
   amountMl?: number;
