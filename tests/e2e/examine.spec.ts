@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 
 test('Examiner enriches the object popup without being required to use the object', async ({ page }) => {
   await page.getByRole('button', { name: /Inventaire/u }).click();
-  await page.getByRole('button', { name: /Téléphone/u }).click();
+  await page.getByTestId('inventory-view').getByRole('button', { name: /Téléphone/u }).click();
 
   const dialog = page.getByRole('dialog');
   await expect(dialog).toBeVisible();
