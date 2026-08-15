@@ -1,7 +1,7 @@
 import type { MapUiState } from '../app/map-state';
 import type { UiPreferences } from '../app/preferences';
 import { performAction, type GameAction, type GameState } from '../app/game-api';
-import { createMapController } from './map';
+import type { MapController } from './map';
 import { menuOverlay, type MenuPanel } from './menu';
 import {
   escapeHtml,
@@ -46,7 +46,35 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
   };
   let menuPanel: MenuPanel = null;
   let preferences: UiPreferences = { ...options.preferences };
-  const mapController = createMapController(options.mapState, options.persistMapState);
+  let mapController: MapController | null = null;
+  let mapControllerPromise: Promise<MapController> | null = null;
+
+  const getMapController = (): Promise<MapController> => {
+    if (mapController) return Promise.resolve(mapController);
+    if (!mapControllerPromise) {
+      mapControllerPromise = import('./map').then(({ createMapController }) => {
+        const controller = createMapController(options.mapState, options.persistMapState);
+        mapController = controller;
+        return controller;
+      });
+    }
+    return mapControllerPromise;
+  };
+
+  const attachMapWhenReady = (): void => {
+    void getMapController()
+      .then((controller) => {
+        if (ui.view !== 'map') {
+          controller.detach();
+          return;
+        }
+        const slot = root.querySelector<HTMLElement>('[data-map-slot]');
+        if (slot) controller.attach(slot);
+      })
+      .catch((error: unknown) => {
+        console.error('ABSENCE map module failed to load.', error);
+      });
+  };
 
   const render = (): void => {
     root.innerHTML = [
@@ -57,12 +85,8 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
       menuOverlay(menuPanel, preferences),
     ].join('');
 
-    if (ui.view === 'map') {
-      const slot = root.querySelector<HTMLElement>('[data-map-slot]');
-      if (slot) mapController.attach(slot);
-    } else {
-      mapController.detach();
-    }
+    if (ui.view === 'map') attachMapWhenReady();
+    else mapController?.detach();
   };
 
   const execute = (action: GameAction): void => {
