@@ -18,21 +18,15 @@ export const INITIAL_STATE: GameState = {
     garden: { id: 'garden', name: 'Jardin', features: {} },
   },
   connections: {
-    bedroom_kitchen: {
-      id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', type: 'door',
-      open: true, locked: false, openSeconds: 2, travelSeconds: 12,
-    },
-    kitchen_garden: {
-      id: 'kitchen_garden', a: 'kitchen', b: 'garden', type: 'door',
-      open: true, locked: false, openSeconds: 2, travelSeconds: 10,
-    },
+    bedroom_kitchen: { id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', type: 'door', open: true, locked: false, openSeconds: 2, travelSeconds: 12 },
+    kitchen_garden: { id: 'kitchen_garden', a: 'kitchen', b: 'garden', type: 'door', open: true, locked: false, openSeconds: 2, travelSeconds: 10 },
   },
   containers: {
     bedroom_drawer: { id: 'bedroom_drawer', name: 'Tiroir de la table de nuit', locationId: 'bedroom', open: false, locked: false, contentIds: ['spare_key_01'] },
     kitchen_fridge: { id: 'kitchen_fridge', name: 'Réfrigérateur', locationId: 'kitchen', open: false, locked: false, contentIds: [] },
   },
   items: {
-    phone_01: { id: 'phone_01', definitionId: 'phone', name: 'Téléphone', location: { kind: 'inventory' }, examined: false, batteryPercent: 84, condition: 'Bon état' },
+    phone_01: { id: 'phone_01', definitionId: 'smartphone', name: 'Téléphone', location: { kind: 'inventory' }, examined: false, batteryPercent: 78, condition: 'Bon état' },
     apple_01: { id: 'apple_01', definitionId: 'apple', name: 'Pomme', location: { kind: 'location', id: 'kitchen' }, examined: false, condition: 'Fraîche' },
     water_01: { id: 'water_01', definitionId: 'water_bottle', name: "Bouteille d’eau", location: { kind: 'location', id: 'kitchen' }, examined: false, liquidMl: 500, capacityMl: 500, condition: 'Bon état' },
     towel_01: { id: 'towel_01', definitionId: 'towel', name: 'Torchon', location: { kind: 'location', id: 'kitchen' }, examined: false, condition: 'Sec' },
@@ -40,7 +34,7 @@ export const INITIAL_STATE: GameState = {
   },
   infrastructure: {
     water: { available: true, pressure: 1 },
-    electricity: { available: true },
+    electricity: { available: true, voltagePercent: 100 },
     mobile: { available: true, signal: 3 },
   },
   memory: { shoutedForWife: false, visitedLocationIds: ['bedroom'] },

@@ -40,11 +40,6 @@ export interface LocationState {
   features: LocationFeatures;
 }
 
-/**
- * Canonical world-graph edge. Mirrors the v0.1.8 connection contract:
- * a connection can be open/closed and locked/unlocked, with separate opening
- * and traversal durations.
- */
 export interface ConnectionState {
   id: ConnectionId;
   a: LocationId;
@@ -80,6 +75,7 @@ export interface ItemState {
   liquidMl?: number;
   capacityMl?: number;
   batteryPercent?: number;
+  enabled?: boolean;
   condition?: string;
 }
 
@@ -90,6 +86,7 @@ export interface InfrastructureState {
   };
   electricity: {
     available: boolean;
+    voltagePercent: number;
   };
   mobile: {
     available: boolean;
@@ -125,6 +122,8 @@ export type ActionId =
   | 'DRINK_ITEM'
   | 'DRINK_TAP'
   | 'FILL_LIQUID_CONTAINER'
+  | 'USE_ITEM'
+  | 'CHARGE_ITEM'
   | 'EXAMINE_ITEM'
   | 'SHOUT_FOR_WIFE'
   | 'WAIT';
@@ -132,6 +131,7 @@ export type ActionId =
 export interface GameAction {
   id: ActionId;
   targetId?: string;
+  sourceId?: string;
   amountMl?: number;
   seconds?: number;
 }
@@ -141,6 +141,7 @@ export interface ActionOption {
   label: string;
   detail?: string;
   targetId?: string;
+  sourceId?: string;
   amountMl?: number;
   seconds?: number;
 }

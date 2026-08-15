@@ -4,35 +4,30 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 
 ## Déjà migré dans le nouveau noyau
 
-- Santé exprimée en PV 0–100.
-- Faim / soif / fatigue / stress / douleur en %.
-- Faim +1 % / 25 min.
-- Soif +1 % / 15 min.
-- Fatigue +1 % / 20 min.
-- **Perte de PV critique historique restaurée exactement** : budget fractionnaire persistant, soif ≥90/100 et faim ≥90/100.
-- Régression historique couverte : soif 95 %, +30 min → soif 97 %, santé −1 PV.
-- Le calcul analytique conserve les mêmes résultats de PV quel que soit le découpage courant de simulation ; le léger écart sous le millième sur les valeurs fractionnaires est conservé car le v0.1.8 arrondissait chaque jauge et budget à 6 décimales après chaque avance.
-- Mort logique lorsque la santé atteint 0 PV.
-- Graphe de lieux canonique.
-- **Connexions/portes v0.1.8 migrées** : `open`, `locked`, durée d'ouverture et durée de traversée distinctes.
-- Une connexion fermée doit être ouverte avant le déplacement ; une connexion verrouillée bloque ouverture et déplacement.
-- Inventaire et emplacement persistant des objets.
+- Santé exprimée en PV 0–100 ; besoins en %.
+- Faim +1 % / 25 min ; soif +1 % / 15 min ; fatigue +1 % / 20 min.
+- Perte de PV critique historique : budget fractionnaire persistant, seuils soif/faim 90/100.
+- Régression historique : soif 95 %, +30 min → soif 97 %, santé −1 PV.
+- Mort logique à 0 PV.
+- Graphe de lieux canonique ; connexions avec `open`, `locked`, `openSeconds`, `travelSeconds`.
+- Inventaire et emplacement persistant unique des objets.
 - Pomme : faim −9, soif −4, durée 120 s.
-- Liquides en ml et bouteille de 500 ml.
-- Boire partiellement.
-- Remplir une bouteille depuis un robinet fonctionnel.
+- Liquides en ml, bouteille 500 ml, boisson partielle et remplissage au robinet.
 - Actions d'objet uniquement dans le popup de l'objet.
 - Contenant : Ouvrir → contenu visible immédiatement.
-- Examiner un objet sans en faire un verrou d'utilisation.
+- Examiner est informatif et n'est pas un verrou d'utilisation.
 - Narratif de lieu dérivé de l'état réel.
-- Sauvegarde v0.2.0 isolée et versionnée.
-- Validation des invariants de `GameState` avant sauvegarde.
+- Sauvegarde v0.2.0 isolée, versionnée et validée par invariants.
+- **Batteries génériques restaurées** : charge persistante, coût d'usage, drain passif, extinction à 0 %.
+- Téléphone : 78 % initial, −0,03 % par usage, recharge 2 %/min.
+- Lampe : 64 % initial, −0,02 % par usage, −0,25 %/min lorsqu'elle est allumée.
+- Source électrique générique et recharge statique selon disponibilité/tension actuelle.
 
 ## À migrer avant promotion
 
 - Modificateurs de physiologie liés à la température/météo.
-- **Système générique clé → serrure → déverrouillage** (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
-- Batteries et recharge génériques.
+- Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
+- Interruption de recharge pendant une transition autonome du réseau électrique.
 - Périssables / réfrigération.
 - Réseaux eau / électricité / mobile autonomes et déterministes.
 - Événements autonomes avec seed.
