@@ -64,13 +64,28 @@ function historicalItems(state: Record<string, unknown>): Record<string, unknown
   return object(state.items);
 }
 
+function historicalItemSummary(state: Record<string, unknown>): string {
+  const summary = Object.entries(historicalItems(state)).map(([id, raw]) => {
+    const item = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw as Record<string, unknown> : {};
+    const nested = item.state && typeof item.state === 'object' && !Array.isArray(item.state) ? item.state as Record<string, unknown> : {};
+    return {
+      id,
+      name: item.name ?? item.label ?? item.type,
+      definitionId: item.definitionId ?? item.definition ?? item.kind ?? item.type,
+      keys: Object.keys(item).sort(),
+      stateKeys: Object.keys(nested).sort(),
+    };
+  });
+  return JSON.stringify(summary);
+}
+
 function findHistoricalItem(state: Record<string, unknown>, predicate: (id: string, item: Record<string, unknown>) => boolean): [string, Record<string, unknown>] {
   for (const [id, raw] of Object.entries(historicalItems(state))) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const item = raw as Record<string, unknown>;
     if (predicate(id, item)) return [id, item];
   }
-  throw new Error('Historical item not found');
+  throw new Error(`Historical item not found: ${historicalItemSummary(state)}`);
 }
 
 function historicalApple(state: Record<string, unknown>): [string, Record<string, unknown>] {
