@@ -1,16 +1,18 @@
 import * as L from 'leaflet';
-import { DEFAULT_HOME_COORDINATES, normalizeMapUiState, updateMapViewport, type ExploredMapArea, type MapUiState } from '../app/map-state';
+import { DEFAULT_HOME_COORDINATES, normalizeMapUiState, updateMapViewport, type ExploredMapArea, type ExploredMapCorridor, type MapCoordinate, type MapUiState } from '../app/map-state';
 import { fetchOverpassPois, mapDistanceMeters, mapPoiCacheKey, MAP_POI_MAX_HOME_DISTANCE_M, MAP_POI_MIN_ZOOM, type MapPoi, type MapPoiCategory } from './map-pois';
 
 class FogCanvasLayer extends L.Layer {
   private canvas: HTMLCanvasElement | null = null;
   private mapRef: L.Map | null = null;
   private areas: ExploredMapArea[];
+  private corridors: ExploredMapCorridor[];
   private readonly drawBound = (): void => this.draw();
 
-  constructor(areas: ExploredMapArea[]) {
+  constructor(areas: ExploredMapArea[], corridors: ExploredMapCorridor[]) {
     super();
     this.areas = structuredClone(areas);
+    this.corridors = structuredClone(corridors);
   }
 
   override onAdd(map: L.Map): this {
@@ -37,17 +39,36 @@ class FogCanvasLayer extends L.Layer {
     return this;
   }
 
-  setAreas(areas: ExploredMapArea[]): void {
+  setExploration(areas: ExploredMapArea[], corridors: ExploredMapCorridor[]): void {
     this.areas = structuredClone(areas);
+    this.corridors = structuredClone(corridors);
     this.draw();
   }
 
-  private radiusPixels(area: ExploredMapArea, map: L.Map): number {
+  private radiusPixels(point: MapCoordinate, radiusM: number, map: L.Map): number {
     const earthRadiusM = 6378137;
-    const latitudeOffset = area.radiusM / earthRadiusM * 180 / Math.PI;
-    const center = map.latLngToContainerPoint([area.lat, area.lng]);
-    const edge = map.latLngToContainerPoint([area.lat + latitudeOffset, area.lng]);
+    const latitudeOffset = radiusM / earthRadiusM * 180 / Math.PI;
+    const center = map.latLngToContainerPoint([point.lat, point.lng]);
+    const edge = map.latLngToContainerPoint([point.lat + latitudeOffset, point.lng]);
     return Math.max(1, Math.abs(edge.y - center.y));
+  }
+
+  private drawCorridor(context: CanvasRenderingContext2D, corridor: ExploredMapCorridor, map: L.Map): void {
+    if (corridor.points.length < 2) return;
+    const firstPoint = corridor.points[0]!;
+    context.save();
+    context.strokeStyle = '#000';
+    context.lineWidth = Math.max(2, this.radiusPixels(firstPoint, corridor.radiusM, map) * 2);
+    context.lineCap = 'round';
+    context.lineJoin = 'round';
+    context.beginPath();
+    corridor.points.forEach((point, index) => {
+      const projected = map.latLngToContainerPoint([point.lat, point.lng]);
+      if (index === 0) context.moveTo(projected.x, projected.y);
+      else context.lineTo(projected.x, projected.y);
+    });
+    context.stroke();
+    context.restore();
   }
 
   private draw(): void {
@@ -61,6 +82,8 @@ class FogCanvasLayer extends L.Layer {
     canvas.height = Math.round(size.y * dpr);
     canvas.style.width = `${size.x}px`;
     canvas.style.height = `${size.y}px`;
+    canvas.dataset.exploredAreas = String(this.areas.length);
+    canvas.dataset.exploredCorridors = String(this.corridors.length);
     L.DomUtil.setPosition(canvas, map.containerPointToLayerPoint([0, 0]));
     const context = canvas.getContext('2d');
     if (!context) return;
@@ -84,11 +107,12 @@ class FogCanvasLayer extends L.Layer {
     context.fillStyle = '#000';
     for (const area of this.areas) {
       const center = map.latLngToContainerPoint([area.lat, area.lng]);
-      const radius = this.radiusPixels(area, map);
+      const radius = this.radiusPixels(area, area.radiusM, map);
       context.beginPath();
       context.arc(center.x, center.y, radius, 0, Math.PI * 2);
       context.fill();
     }
+    for (const corridor of this.corridors) this.drawCorridor(context, corridor, map);
     context.globalCompositeOperation = 'source-over';
   }
 }
@@ -241,7 +265,7 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     fogPane.style.pointerEvents = 'none';
     const poiPane = map.createPane('poiPane');
     poiPane.style.zIndex = '650';
-    fog = new FogCanvasLayer(state.explored).addTo(map);
+    fog = new FogCanvasLayer(state.explored, state.exploredCorridors).addTo(map);
     poiLayer = L.layerGroup().addTo(map);
 
     const homeIcon = L.divIcon({ className: 'absence-home-marker', html: '<span aria-label="Maison">🏠</span>', iconSize: [36, 36], iconAnchor: [18, 18] });
@@ -259,7 +283,7 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     attach(slot): void {
       ensureMap();
       if (host.parentElement !== slot) slot.append(host);
-      fog?.setAreas(state.explored);
+      fog?.setExploration(state.explored, state.exploredCorridors);
       window.requestAnimationFrame(() => {
         map?.invalidateSize({ animate: false });
         schedulePoiLoad();
@@ -272,7 +296,7 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     },
     sync(nextState): void {
       state = normalizeMapUiState(nextState);
-      fog?.setAreas(state.explored);
+      fog?.setExploration(state.explored, state.exploredCorridors);
       if (map) map.setView([state.center.lat, state.center.lng], state.zoom, { animate: false });
       schedulePoiLoad();
     },
