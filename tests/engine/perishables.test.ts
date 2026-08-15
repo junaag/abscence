@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { getLocationTemperatureC, setLocationEnvironment } from '../../src/engine/location-environment';
 import {
   advancePerishables,
   getItemStorageTemperatureC,
@@ -6,6 +7,7 @@ import {
   temperatureSpoilageMultiplier,
 } from '../../src/engine/perishables';
 import { createInitialState } from '../../src/engine/state';
+import { setWeatherState } from '../../src/engine/weather';
 
 function putAppleInFridge() {
   const state = createInitialState();
@@ -33,13 +35,26 @@ describe('perishable storage', () => {
     expect(perishableSpoilageMultiplier(4, 0.25, true)).toBeCloseTo(0.25, 6);
   });
 
-  it('starts the apple at the historical 94% freshness and loses 0.2 point per hour at 20C', () => {
+  it('uses the historical default indoor temperature of 21C for loose kitchen food', () => {
     const state = createInitialState();
     expect(state.items.apple_01?.freshnessPercent).toBe(94);
+    expect(getLocationTemperatureC(state, 'kitchen')).toBe(21);
     const changes = advancePerishables(state, 3600);
-    expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.8, 6);
-    expect(changes[0]?.storageTemperatureC).toBe(20);
-    expect(changes[0]?.storageMultiplier).toBe(1);
+    expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.788, 6);
+    expect(changes[0]?.storageTemperatureC).toBe(21);
+    expect(changes[0]?.storageMultiplier).toBeCloseTo(1.06, 6);
+  });
+
+  it('uses outdoor weather directly for hot storage', () => {
+    const state = createInitialState();
+    const apple = state.items.apple_01;
+    if (!apple) throw new Error('missing apple');
+    apple.location = { kind: 'location', id: 'garden' };
+    setWeatherState(state, { temperatureC: 35 });
+    const changes = advancePerishables(state, 24 * 3600);
+    expect(changes[0]?.storageTemperatureC).toBe(35);
+    expect(changes[0]?.storageMultiplier).toBe(2);
+    expect(apple.freshnessPercent).toBeCloseTo(84.4, 6);
   });
 
   it('uses the powered refrigerator target of 4C and historical 0.25 cap', () => {
@@ -56,20 +71,23 @@ describe('perishable storage', () => {
     expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(92.8, 6);
   });
 
-  it('falls back to room temperature when refrigerator voltage is below 70%', () => {
+  it('falls back to real kitchen temperature when refrigerator voltage is below 70%', () => {
     const state = putAppleInFridge();
+    setWeatherState(state, { temperatureC: 30 });
     state.infrastructure.electricity.voltagePercent = 69;
-    expect(getItemStorageTemperatureC(state, 'apple_01')).toBe(20);
+    expect(getItemStorageTemperatureC(state, 'apple_01')).toBe(28);
     const changes = advancePerishables(state, 3600);
-    expect(state.items.apple_01?.freshnessPercent).toBeCloseTo(93.8, 6);
-    expect(changes[0]?.storageMultiplier).toBe(1);
+    expect(changes[0]?.storageTemperatureC).toBe(28);
+    expect(changes[0]?.storageMultiplier).toBeCloseTo(1.48, 6);
   });
 
-  it('falls back to room temperature when electricity is unavailable', () => {
+  it('falls back to fixed room temperature when electricity is unavailable', () => {
     const state = putAppleInFridge();
+    setLocationEnvironment(state, 'kitchen', { type: 'indoor', temperatureC: 32 });
+    setWeatherState(state, { temperatureC: 38 });
     state.infrastructure.electricity.available = false;
     state.infrastructure.electricity.voltagePercent = 0;
-    expect(getItemStorageTemperatureC(state, 'apple_01')).toBe(20);
+    expect(getItemStorageTemperatureC(state, 'apple_01')).toBe(32);
   });
 
   it('does not degrade consumed food', () => {
