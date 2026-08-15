@@ -1,0 +1,12 @@
+import { describe, expect, it } from 'vitest';
+import { getContainerActions, getContextActions, getItemActions, performAction } from '../../src/engine/actions';
+import { containerContents } from '../../src/engine/selectors';
+import { createInitialState } from '../../src/engine/state';
+
+describe('action authority', () => {
+  it('keeps object actions out of the main context menu', () => { const state=createInitialState(); const ids=getContextActions(state).map(a=>a.id); expect(ids).not.toContain('TAKE_ITEM'); expect(ids).not.toContain('EXAMINE_ITEM'); expect(ids).not.toContain('FILL_LIQUID_CONTAINER'); });
+  it('opens every container directly and reveals its content', () => { const state=createInitialState(); expect(containerContents(state,'bedroom_drawer')).toEqual([]); expect(getContainerActions(state,'bedroom_drawer').map(a=>a.id)).toEqual(['OPEN_CONTAINER']); const t=performAction(state,{id:'OPEN_CONTAINER',targetId:'bedroom_drawer'}); expect(t.result.success).toBe(true); expect(containerContents(t.state,'bedroom_drawer').map(i=>i.id)).toEqual(['spare_key_01']); });
+  it('never exposes a Search/Fouiller action for containers', () => { const state=createInitialState(); const all=getContainerActions(state,'bedroom_drawer'); expect(all.some(a=>/search|fouill/i.test(`${a.id} ${a.label}`))).toBe(false); });
+  it('apple reduces hunger by 9 and thirst by 4 before time drift', () => { let state=createInitialState(); state=performAction(state,{id:'MOVE',targetId:'kitchen'}).state; state=performAction(state,{id:'TAKE_ITEM',targetId:'apple_01'}).state; const h=state.player.needs.hunger,t=state.player.needs.thirst; const r=performAction(state,{id:'EAT_ITEM',targetId:'apple_01'}); expect(r.result.success).toBe(true); expect(r.state.player.needs.hunger).toBeLessThan(h-8.8); expect(r.state.player.needs.thirst).toBeLessThan(t-3.8); expect(r.state.items.apple_01?.location.kind).toBe('consumed'); });
+  it('shows bottle refill only in the bottle popup when carried and not full', () => { let state=createInitialState(); state=performAction(state,{id:'MOVE',targetId:'kitchen'}).state; state=performAction(state,{id:'TAKE_ITEM',targetId:'water_01'}).state; state=performAction(state,{id:'DRINK_ITEM',targetId:'water_01',amountMl:250}).state; expect(getContextActions(state).some(a=>a.id==='FILL_LIQUID_CONTAINER')).toBe(false); expect(getItemActions(state,'water_01').some(a=>a.id==='FILL_LIQUID_CONTAINER')).toBe(true); });
+});
