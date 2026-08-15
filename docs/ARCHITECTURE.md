@@ -13,6 +13,7 @@
 9. **Les actions sont découpées par domaine.** Le dispatcher central route vers mouvement, contenants, objets et monde ; il ne contient pas les règles métier de ces domaines.
 10. **Le moteur est runtime-agnostique.** Il ne dépend ni du DOM, ni de `window`, ni de `localStorage`; ces dépendances sont injectées depuis `src/app`.
 11. **Les frontières d'import sont exécutables.** ESLint bloque moteur → UI et bloque l'UI qui contourne la façade publique du moteur.
+12. **Chaque action est transactionnelle.** `performAction` valide l'état entrant et sortant. Une réussite doit produire un nouvel état valide ; un échec doit rendre exactement l'état d'entrée.
 
 ## Flux
 
@@ -26,6 +27,9 @@ UI interaction
 GameAction
    ↓
 performAction(state, action)
+   ├─ validate input invariants
+   ├─ dispatch to one domain handler
+   └─ validate transaction + output invariants
    ↓
 GameState suivant + ActionResult
    ↓
@@ -42,12 +46,12 @@ render(state)
 - `src/engine/actions/containers.ts` : interactions de contenants.
 - `src/engine/actions/items.ts` : nourriture, liquides, usage, recharge, examen.
 - `src/engine/actions/world.ts` : actions sans cible objet.
-- `src/engine/actions/dispatcher.ts` : unique point d'entrée de mutation moteur.
+- `src/engine/actions/dispatcher.ts` : unique frontière transactionnelle de mutation moteur.
 - `src/engine/rules.ts` : règles numériques transverses vérifiées.
 - `src/content` : données de jeu sans logique DOM.
 - `src/narrative` : texte calculé depuis l'état.
 - `src/ui` : rendu et interactions, sans mutation gameplay directe.
-- `tests/engine` : règles unitaires.
+- `tests/engine` : règles unitaires et contrats structurels.
 - `tests/integration` : scénarios de jeu complets.
 - `tests/e2e` : parcours navigateur mobile.
 

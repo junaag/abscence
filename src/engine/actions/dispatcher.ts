@@ -1,3 +1,4 @@
+import { assertValidState } from '../invariants';
 import type { ActionId, EngineTransition, GameAction, GameState } from '../model';
 import { openContainer } from './containers';
 import { chargeItem, drinkItem, eatItem, examineItem, fillLiquidContainer, takeItem, useItem } from './items';
@@ -8,7 +9,7 @@ function assertNever(value: never): never {
   throw new Error(`Unhandled ABSENCE action: ${String(value)}`);
 }
 
-export function performAction(state: GameState, action: GameAction): EngineTransition {
+function dispatch(state: GameState, action: GameAction): EngineTransition {
   const id: ActionId = action.id;
   switch (id) {
     case 'MOVE': return move(state, action.targetId);
@@ -26,4 +27,32 @@ export function performAction(state: GameState, action: GameAction): EngineTrans
     case 'WAIT': return wait(state, action.seconds);
     default: return assertNever(id);
   }
+}
+
+/**
+ * Single transactional boundary for every gameplay mutation.
+ *
+ * - refuses to run against a structurally inconsistent world;
+ * - failed actions must be true no-ops and retain the exact input state reference;
+ * - successful actions must return a distinct, valid state.
+ *
+ * Individual domain handlers stay simple; this boundary guarantees their contract.
+ */
+export function performAction(state: GameState, action: GameAction): EngineTransition {
+  assertValidState(state);
+  const transition = dispatch(state, action);
+
+  if (!transition.result.success) {
+    if (transition.state !== state) {
+      throw new Error(`Failed action ${action.id} violated transaction contract by returning a different state.`);
+    }
+    return transition;
+  }
+
+  if (transition.state === state) {
+    throw new Error(`Successful action ${action.id} violated transaction contract by reusing the input state.`);
+  }
+
+  assertValidState(transition.state);
+  return transition;
 }
