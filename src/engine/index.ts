@@ -2,6 +2,7 @@ export { performAction, getContextActions, getContainerActions, getItemActions }
 export { addPersistentEffect, activeEffectsAt, advanceWorldEffects, findActiveEffect } from './effects';
 export { applyDueInfrastructureTransitions, getMobileNetworkState, isElectricityAvailable, isMobileAvailable, isWaterAvailable, secondsUntilNextInfrastructureTransition } from './infrastructure';
 export { assertValidState, validateState } from './invariants';
+export { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, migrateLegacyPreviewState } from './legacy-migration';
 export { loadState, saveState, SAVE_KEY } from './persistence';
 export { getDistanceMeters, getPerceivedWorldEvents, getWorldEventPerception } from './perception';
 export { getPhoneCapabilities, phoneCalls, phoneDeviceItemId, phoneMessages } from './phone';
@@ -12,6 +13,7 @@ export { formatClock } from './time';
 export { createWeatherState, ensureWeatherState, getWeatherState, normalizeWeatherCondition, setWeatherState, WEATHER_CONDITIONS } from './weather';
 export { addWorldEventSource, applyDueWorldEventTransitions, createWorldEventSource, deterministicWorldEventUnit, ensureWorldEventSimulationState, getNextWorldEventBoundary, secondsUntilNextWorldEventBoundary, setWorldEventSeed, synchronizeWorldEventSourceSchedule, WORLD_EVENT_SEED } from './world-events';
 export type { InvariantViolation } from './invariants';
+export type { LegacyMigrationResult } from './legacy-migration';
 export type { PerceptionChannel, PerceptionChannelId, WorldEventPerception } from './perception';
 export type { PhoneCapabilities } from './phone';
 export type { WeatherCondition, WeatherState } from './weather';
