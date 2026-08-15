@@ -2,7 +2,7 @@ export { performAction, getContextActions, getContainerActions, getItemActions }
 export { addPersistentEffect, activeEffectsAt, advanceWorldEffects, findActiveEffect } from './effects';
 export { applyDueInfrastructureTransitions, getMobileNetworkState, isElectricityAvailable, isMobileAvailable, isWaterAvailable, secondsUntilNextInfrastructureTransition } from './infrastructure';
 export { assertValidState, validateState } from './invariants';
-export { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, migrateLegacyPreviewState } from './legacy-migration-compat';
+export { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, migrateLegacyPreviewState } from './legacy-migration';
 export { ensureLocationEnvironmentState, getLocationEnvironment, getLocationTemperatureC, getPlayerEnvironment, setLocationEnvironment } from './location-environment';
 export { assertValidLocationEnvironmentState, validateLocationEnvironmentState } from './location-environment-validation';
 export { loadState, saveState, SAVE_KEY } from './persistence';
@@ -15,7 +15,7 @@ export { formatClock } from './time';
 export { createWeatherState, ensureWeatherState, getWeatherState, normalizeWeatherCondition, setWeatherState, WEATHER_CONDITIONS } from './weather';
 export { addWorldEventSource, applyDueWorldEventTransitions, createWorldEventSource, deterministicWorldEventUnit, ensureWorldEventSimulationState, getNextWorldEventBoundary, secondsUntilNextWorldEventBoundary, setWorldEventSeed, synchronizeWorldEventSourceSchedule, WORLD_EVENT_SEED } from './world-events';
 export type { InvariantViolation } from './invariants';
-export type { LegacyMigrationResult } from './legacy-migration-compat';
+export type { LegacyMigrationResult } from './legacy-migration';
 export type { LocationEnvironmentState, LocationEnvironmentType, PlayerEnvironmentState } from './location-environment';
 export type { LocationEnvironmentViolation } from './location-environment-validation';
 export type { PerceptionChannel, PerceptionChannelId, WorldEventPerception } from './perception';
