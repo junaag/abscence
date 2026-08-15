@@ -12,6 +12,7 @@ export function takeItem(state: GameState, itemId: string | undefined): EngineTr
   if (!itemId || !isItemAccessible(state, itemId)) return failure(state, 'Impossible', 'Cet objet n’est pas accessible.');
   const item = state.items[itemId];
   if (!item || item.location.kind === 'inventory') return failure(state, 'Impossible', 'Cet objet est déjà dans votre inventaire.');
+  if (getItemDefinition(item.definitionId)?.portable === false) return failure(state, 'Objet fixe', 'Cet objet fait partie du lieu et ne peut pas être emporté.');
   const next = cloneState(state); const nextItem = next.items[itemId];
   if (!nextItem) return failure(state, 'Impossible', 'Cet objet a disparu.');
   if (nextItem.location.kind === 'container') { const source = next.containers[nextItem.location.id]; if (source) source.contentIds = source.contentIds.filter((id) => id !== itemId); }
