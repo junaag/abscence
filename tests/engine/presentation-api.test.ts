@@ -5,6 +5,7 @@ const EXPECTED_RUNTIME_EXPORTS = [
   'containerContents',
   'containersAtCurrentLocation',
   'currentLocation',
+  'describeItemExamination',
   'formatClock',
   'getContainerActions',
   'getContextActions',
