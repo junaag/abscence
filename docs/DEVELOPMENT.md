@@ -8,9 +8,9 @@ Ce document définit le cadre de développement de référence pour ABSENCE à p
 
 Le jeu suit un flux unique :
 
-`UI → GameAction → moteur → GameState → persistance → rendu`
+`UI → API de présentation → GameAction → moteur → GameState → persistance → rendu`
 
-L’interface ne modifie jamais directement le monde. Le moteur ne dépend jamais du DOM, de Leaflet, de `localStorage` ni d’une API navigateur.
+L’interface ne modifie jamais directement le monde. Elle n’importe pas la façade moteur générale : `src/ui` passe par `src/app/game-api.ts`, qui n’expose que les lectures et actions autorisées à la présentation. Le moteur ne dépend jamais du DOM, de Leaflet, de `localStorage` ni d’une API navigateur.
 
 Le `GameState` est l’unique source de vérité du gameplay. Le narratif, les actions disponibles, l’inventaire, le téléphone et les états des lieux sont dérivés de cet état.
 
@@ -19,7 +19,10 @@ Le `GameState` est l’unique source de vérité du gameplay. Le narratif, les a
 - `src/engine/` : simulation pure, règles, temps, physiologie, événements, infrastructures et persistance.
 - `src/content/` : définitions de contenu et état initial ; pas de logique UI.
 - `src/narrative/` : texte dérivé du moteur ; ne crée pas d’état parallèle.
-- `src/ui/` : rendu, popups, téléphone, carte et interactions ; passe par la façade publique du moteur.
+- `src/app/game-api.ts` : frontière de présentation ; seule API gameplay importable directement par `src/ui`.
+- `src/app/` : adaptateurs navigateur, stockage, préférences et état UI de carte.
+- `src/ui/presentation.ts` : rendu HTML pur dérivé de l’état, sans orchestration de gameplay.
+- `src/ui/render.ts` : contrôleur d’interactions qui transforme les clics en `GameAction` puis persiste/rend le nouvel état.
 - `tests/engine/` : tests unitaires et invariants.
 - `tests/integration/` : scénarios multi-systèmes.
 - `tests/e2e/` : parcours réels en navigateur mobile.
@@ -33,7 +36,7 @@ Une mécanique générique doit être implémentée par données + composants r�
 3. Ajouter ou ajuster les tests moteur avant l’intégration UI quand c’est pertinent.
 4. Implémenter la règle dans le moteur ou le module concerné.
 5. Vérifier les invariants de `GameState`.
-6. Brancher l’UI uniquement sur les actions/sélecteurs exposés par le moteur.
+6. Brancher l’UI uniquement sur les actions/sélecteurs exposés par `src/app/game-api.ts`.
 7. Ajouter un scénario d’intégration si la règle traverse plusieurs systèmes.
 8. Ajouter ou adapter un smoke E2E mobile pour les parcours critiques.
 9. Laisser la CI exécuter intégrité, TypeScript, lint, tests, build/budget et Playwright mobile.
@@ -60,6 +63,7 @@ Un changement n’est considéré terminé que lorsque :
 
 - Pas de logique de gameplay dans un handler DOM.
 - Pas de mutation directe du `GameState` par l’UI.
+- Pas d’import direct `src/ui → src/engine` ; la présentation passe par `src/app/game-api.ts`.
 - Pas de `eval`.
 - Pas de code source encodé en gzip/base64 dans le runtime v0.2.
 - Pas de hotfix runtime superposé à un autre hotfix.
