@@ -3,6 +3,7 @@ import type { UiPreferences } from '../app/preferences';
 import { performAction, type GameAction, type GameState } from '../app/game-api';
 import type { MapController } from './map';
 import { menuOverlay, type MenuPanel } from './menu';
+import { renderPersistenceWarning } from './persistence-warning';
 import {
   escapeHtml,
   renderHomeView,
@@ -20,11 +21,12 @@ import {
 export type { ViewId } from './presentation';
 
 interface MountOptions {
-  persist(state: GameState): void;
+  persist(state: GameState): boolean;
   preferences: UiPreferences;
-  persistPreferences(preferences: UiPreferences): void;
+  persistPreferences(preferences: UiPreferences): boolean;
   mapState: MapUiState;
-  persistMapState(state: MapUiState): void;
+  persistMapState(state: MapUiState): boolean;
+  initialPersistenceWarning?: boolean;
 }
 
 function viewMarkup(state: GameState, ui: UiState): string {
@@ -46,14 +48,24 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
   };
   let menuPanel: MenuPanel = null;
   let preferences: UiPreferences = { ...options.preferences };
+  let persistenceWarning = Boolean(options.initialPersistenceWarning);
   let mapController: MapController | null = null;
   let mapControllerPromise: Promise<MapController> | null = null;
+
+  const markPersistenceFailure = (success: boolean): void => {
+    if (!success) persistenceWarning = true;
+  };
+
+  const persistMapState = (mapState: MapUiState): void => {
+    markPersistenceFailure(options.persistMapState(mapState));
+    if (persistenceWarning) render();
+  };
 
   const getMapController = (): Promise<MapController> => {
     if (mapController) return Promise.resolve(mapController);
     if (!mapControllerPromise) {
       mapControllerPromise = import('./map').then(({ createMapController }) => {
-        const controller = createMapController(options.mapState, options.persistMapState);
+        const controller = createMapController(options.mapState, persistMapState);
         mapController = controller;
         return controller;
       });
@@ -76,9 +88,10 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
       });
   };
 
-  const render = (): void => {
+  function render(): void {
     root.innerHTML = [
       renderHud(state),
+      renderPersistenceWarning(persistenceWarning),
       viewMarkup(state, ui),
       renderNavigation(ui.view),
       renderTargetPopup(state, ui),
@@ -87,13 +100,13 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
 
     if (ui.view === 'map') attachMapWhenReady();
     else mapController?.detach();
-  };
+  }
 
   const execute = (action: GameAction): void => {
     const transition = performAction(state, action);
     state = transition.state;
     ui.result = transition.result;
-    options.persist(state);
+    markPersistenceFailure(options.persist(state));
     render();
   };
 
@@ -151,7 +164,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     }
     if (button.dataset.toggleSound !== undefined) {
       preferences = { ...preferences, soundEnabled: !preferences.soundEnabled };
-      options.persistPreferences(preferences);
+      markPersistenceFailure(options.persistPreferences(preferences));
       render();
       return;
     }
