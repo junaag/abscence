@@ -35,6 +35,7 @@ export function loadState(storage: ReadStorage): GameState {
   try {
     const parsed: unknown = JSON.parse(raw);
     if (!isGameState(parsed)) return createInitialState();
+    if (validateLocationEnvironmentState(parsed).length > 0) return createInitialState();
     ensureAutonomousInfrastructureTransitions(parsed);
     ensureWorldEventSimulationState(parsed);
     ensureWeatherState(parsed);
