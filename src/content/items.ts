@@ -22,9 +22,15 @@ export interface PerishableComponent {
   refrigeratedMultiplier?: number;
 }
 
+export interface InspectionComponent {
+  role: string;
+  operation?: string;
+}
+
 export interface ItemDefinition {
   id: string;
   name: string;
+  inspection?: InspectionComponent;
   battery?: BatteryComponent;
   usable?: UsableComponent;
   powerSource?: PowerSourceComponent;
@@ -35,15 +41,47 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   apple: Object.freeze({
     id: 'apple',
     name: 'Pomme',
+    inspection: Object.freeze({
+      role: 'Un aliment consommable qui calme la faim et apporte aussi un peu d’eau.',
+      operation: 'Elle se mange directement et ne nécessite aucun outil.',
+    }),
     perishable: Object.freeze({
       initialFreshnessPercent: 94,
       degradationPercentPerHourAmbient: 0.2,
       refrigeratedMultiplier: 0.25,
     }),
   }),
+  water_bottle: Object.freeze({
+    id: 'water_bottle',
+    name: 'Bouteille d’eau',
+    inspection: Object.freeze({
+      role: 'Un contenant transportable pour conserver et boire de l’eau.',
+      operation: 'Elle peut être bue par petites quantités et remplie à une source d’eau utilisable.',
+    }),
+  }),
+  towel: Object.freeze({
+    id: 'towel',
+    name: 'Torchon',
+    inspection: Object.freeze({
+      role: 'Un textile absorbant utile pour éponger de petites quantités d’eau.',
+      operation: 'Il s’utilise directement sur une zone humide accessible.',
+    }),
+  }),
+  key: Object.freeze({
+    id: 'key',
+    name: 'Petite clé',
+    inspection: Object.freeze({
+      role: 'Une petite clé métallique. Sa serrure correspondante n’est pas identifiée.',
+      operation: 'Il faudra trouver une serrure compatible avant de pouvoir déterminer son utilité exacte.',
+    }),
+  }),
   smartphone: Object.freeze({
     id: 'smartphone',
     name: 'Téléphone',
+    inspection: Object.freeze({
+      role: 'Votre téléphone personnel. Il donne accès aux informations enregistrées et aux fonctions de communication.',
+      operation: 'Il fonctionne sur batterie ; les appels, SMS et données dépendent aussi de l’état du réseau mobile.',
+    }),
     battery: Object.freeze({
       initialChargePct: 78,
       useCostPct: 0.03,
@@ -55,6 +93,10 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   flashlight: Object.freeze({
     id: 'flashlight',
     name: 'Lampe torche',
+    inspection: Object.freeze({
+      role: 'Une source de lumière portable alimentée par batterie.',
+      operation: 'Un interrupteur permet de l’allumer ou de l’éteindre ; la batterie se décharge lorsqu’elle reste allumée.',
+    }),
     battery: Object.freeze({
       initialChargePct: 64,
       useCostPct: 0.02,
@@ -65,6 +107,10 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   wall_outlet: Object.freeze({
     id: 'wall_outlet',
     name: 'Prise électrique',
+    inspection: Object.freeze({
+      role: 'Une prise murale pouvant alimenter ou recharger un appareil compatible.',
+      operation: 'Elle ne fournit du courant que si le réseau électrique du lieu est encore disponible.',
+    }),
     powerSource: Object.freeze({ minimumVoltagePct: 1 }),
   }),
 });
