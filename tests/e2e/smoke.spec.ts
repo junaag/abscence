@@ -51,23 +51,26 @@ test('phone weather reads the persisted simulated world state', async ({ page })
 
 test('hamburger menu exposes home settings about and persists sound preference', async ({ page }) => {
   await page.getByRole('button', { name: 'Menu' }).click();
-  await expect(page.getByTestId('menu-sheet')).toBeVisible();
-  await expect(page.getByRole('button', { name: /Accueil/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Paramètres/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: /À propos/ })).toBeVisible();
+  let menu = page.getByTestId('menu-sheet');
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole('button', { name: /^Accueil/ })).toBeVisible();
+  await expect(menu.getByRole('button', { name: /^Paramètres/ })).toBeVisible();
+  await expect(menu.getByRole('button', { name: /^À propos/ })).toBeVisible();
 
-  await page.getByRole('button', { name: /Paramètres/ }).click();
+  await menu.getByRole('button', { name: /^Paramètres/ }).click();
   await expect(page.getByTestId('sound-setting')).toHaveText('Activé');
   await page.getByRole('switch').click();
   await expect(page.getByTestId('sound-setting')).toHaveText('Coupé');
 
   await page.reload();
   await page.getByRole('button', { name: 'Menu' }).click();
-  await page.getByRole('button', { name: /Paramètres/ }).click();
+  menu = page.getByTestId('menu-sheet');
+  await menu.getByRole('button', { name: /^Paramètres/ }).click();
   await expect(page.getByTestId('sound-setting')).toHaveText('Coupé');
 
   await page.getByRole('button', { name: '‹ Menu' }).click();
-  await page.getByRole('button', { name: /À propos/ }).click();
+  menu = page.getByTestId('menu-sheet');
+  await menu.getByRole('button', { name: /^À propos/ }).click();
   await expect(page.getByText('ABSENCE · v0.2.0-dev')).toBeVisible();
   await expect(page.getByText('Création : Julien Imbert.')).toBeVisible();
 });
