@@ -60,9 +60,28 @@ describe('generic battery resources from engine v0.1.8', () => {
     let state = createInitialState();
     addOutlet(state);
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
-    state.infrastructure.electricity.available = false;
+    state.infrastructure.electricity.phase = 'off';
+    state.infrastructure.electricity.voltagePercent = 0;
     const result = performAction(state, { id: 'CHARGE_ITEM', targetId: 'phone_01', sourceId: 'outlet_01' });
     expect(result.result.success).toBe(false);
     expect(result.state).toBe(state);
+  });
+
+  it('interrupts a long recharge exactly when electricity goes off', () => {
+    let state = createInitialState();
+    addOutlet(state);
+    state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
+    state.engine.infrastructureTimeline = [{
+      atElapsedSeconds: state.engine.elapsedSeconds + 120,
+      channel: 'electricity',
+      phase: 'off',
+      voltagePercent: 0,
+    }];
+    state.engine.nextInfrastructureTransitionIndex = 0;
+    const result = performAction(state, { id: 'CHARGE_ITEM', targetId: 'phone_01', sourceId: 'outlet_01', seconds: 600 });
+    expect(result.result.success).toBe(true);
+    expect(result.result.elapsedSeconds).toBe(120);
+    expect(result.state.items.phone_01?.batteryPercent).toBeCloseTo(82, 5);
+    expect(result.state.infrastructure.electricity.phase).toBe('off');
   });
 });
