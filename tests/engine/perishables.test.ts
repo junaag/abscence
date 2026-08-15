@@ -47,7 +47,8 @@ describe('perishable storage', () => {
 
   it('falls back to room temperature when electricity is unavailable', () => {
     const state = putAppleInFridge();
-    state.infrastructure.electricity.available = false;
+    state.infrastructure.electricity.phase = 'off';
+    state.infrastructure.electricity.voltagePercent = 0;
     expect(getItemStorageTemperatureC(state, 'apple_01')).toBe(20);
   });
 
