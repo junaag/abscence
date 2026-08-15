@@ -114,6 +114,7 @@ describe('controlled preview save migration', () => {
       id: 'legacy_smoke', type: 'smoke', locationId: 'kitchen', intensity: 32, active: true,
       spreading: true, createdAtSeconds: 30, updatedAtSeconds: 60,
     }];
+    legacy.memory = {};
     const memory = object(legacy.memory);
     memory.shoutedForWife = true;
     memory.visitedLocationIds = ['bedroom', 'kitchen'];
