@@ -9,6 +9,8 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Perte de PV critique historique avec budget fractionnaire persistant et seuils faim/soif 90/100.
 - Régression historique : soif 95 %, +30 min → soif 97 %, santé −1 PV.
 - Mort logique à 0 PV.
+- **Modificateurs physiologiques chaleur/humidité historiques restaurés** : soif accélérée au-delà de 26 °C, supplément humidité à partir de 28 °C et >60 %, fatigue accélérée au-delà de 30 °C, avec caps historiques.
+- Les dégâts critiques utilisent le taux de soif environnemental effectif, donc la chaleur peut faire franchir les seuils de danger plus tôt.
 - Graphe de lieux canonique ; connexions avec `open`, `locked`, `openSeconds`, `travelSeconds`.
 - Inventaire et emplacement persistant unique des objets.
 - Pomme : faim −9, soif −4, durée 120 s.
@@ -22,15 +24,14 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - Téléphone : 78 % initial, −0,03 % par usage, recharge 2 %/min.
 - Lampe : 64 % initial, −0,02 % par usage, −0,25 %/min lorsqu'elle est allumée.
 - Source électrique générique et recharge selon disponibilité/tension actuelle.
-- **Fraîcheur persistante des périssables** : pomme 94 % initial, base 0,2 point/h.
-- **Courbe thermique historique de dégradation** restaurée de ≤4 °C à >40 °C.
-- **Réfrigérateur comme contrôleur thermique générique** : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
-- Température de stockage calculée depuis l'emplacement réel de l'objet (lieu, inventaire ou contenant).
+- Fraîcheur persistante des périssables : pomme 94 % initial, base 0,2 point/h.
+- Courbe thermique historique de dégradation restaurée de ≤4 °C à >40 °C.
+- Réfrigérateur comme contrôleur thermique générique : cible 4 °C si électricité disponible et tension ≥70 %, sinon température ambiante du lieu.
+- Température de stockage calculée depuis l'emplacement réel de l'objet.
 
 ## À migrer avant promotion
 
 - Multiplicateur réfrigéré historique additionnel `0,25` : valeur connue mais combinaison exacte avec la courbe thermique à revérifier dans la source historique avant activation.
-- Modificateurs de physiologie liés à la température/météo.
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
 - Interruption de recharge pendant une transition autonome du réseau électrique.
 - Réseaux eau / électricité / mobile autonomes et déterministes.

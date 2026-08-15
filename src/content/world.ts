@@ -13,9 +13,9 @@ export const INITIAL_STATE: GameState = {
     alive: true,
   },
   locations: {
-    bedroom: { id: 'bedroom', name: 'Chambre', ambientTemperatureC: 20, features: {} },
-    kitchen: { id: 'kitchen', name: 'Cuisine', ambientTemperatureC: 20, features: { tap: true, powerOutlet: true } },
-    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, features: {} },
+    bedroom: { id: 'bedroom', name: 'Chambre', ambientTemperatureC: 20, ambientHumidityPercent: 50, features: {} },
+    kitchen: { id: 'kitchen', name: 'Cuisine', ambientTemperatureC: 20, ambientHumidityPercent: 50, features: { tap: true, powerOutlet: true } },
+    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, ambientHumidityPercent: 50, features: {} },
   },
   connections: {
     bedroom_kitchen: { id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', type: 'door', open: true, locked: false, openSeconds: 2, travelSeconds: 12 },

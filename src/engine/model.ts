@@ -37,6 +37,7 @@ export interface LocationState {
   id: LocationId;
   name: string;
   ambientTemperatureC: number;
+  ambientHumidityPercent: number;
   features: LocationFeatures;
 }
 
