@@ -55,14 +55,23 @@ La v0.2.0 ne remplace pas la v0.1.11 tant que cette matrice n'est pas complète.
 - **Météo du téléphone reconnectée** : l’écran lit directement la météo persistée du monde simulé et reste consultable hors réseau ; aucune donnée Internet n’est simulée comme étant réelle.
 - **Validation structurelle du téléphone sauvegardé** : appareil lié à un smartphone valide, identifiants d'historique uniques et signal mobile 0–100 ; une sauvegarde corrompue est récupérée proprement.
 - **Menu global remis au cahier des charges** : Accueil, Paramètres et À propos ; le réglage Son est persisté séparément de la sauvegarde de partie.
-- Smoke mobile couvrant l’ouverture du téléphone, les historiques locaux, la météo, le menu et la persistance du réglage Son.
+- **Carte Leaflet mobile restaurée** : tuiles OpenStreetMap, une seule instance `L.Map` conservée entre les changements de vue, centre/zoom persistants et marqueur Maison avec action « Revenir à la maison ».
+- **Brouillard de guerre géographique persistant restauré** : état de carte séparé de la sauvegarde moteur, cercle initial exploré de 85 m, Canvas gris opaque texturé, trous géographiques persistants, fog pane sous les marqueurs et popups.
+- La manipulation de la carte masque temporairement HUD et navigation basse et agrandit la carte à la hauteur de l’écran, sans recréer Leaflet au retour.
+- **POI OSM progressifs restaurés** : chargement différé après stabilisation de la carte, uniquement à partir du zoom 15 et à proximité du secteur de départ, plafond de 45 marqueurs, requêtes annulables avec délai maximal et cache de quatre zones.
+- **Catégories cartographiques françaises** : Industrie, Commerce, Services, Services publics et Résidentiel nommé ; `Station service` remplace l’ancien libellé Carburant, et `car_repair` est classé Services avant le cas générique `shop`.
+- Les bulles POI affichent uniquement catégorie, nom OSM réel et type géographique ; aucun danger, ressource, état de fouille ou autre donnée interne du moteur n’est exposé sur la carte.
+- Les POI utilisent une pane au-dessus du fog et les popups restent lisibles par-dessus le brouillard.
+- Smoke mobile couvrant l’ouverture du téléphone, les historiques locaux, la météo, le menu, la persistance du réglage Son, Leaflet, le fog, l’instance de carte unique et les POI au-dessus du brouillard.
 - CI reproductible : Node 22, `package-lock.json`, `npm ci`, TypeScript strict, ESLint, Vitest, build Vite et smoke Playwright mobile Pixel 7.
 
 ## À migrer avant promotion
 
 - Système générique clé → serrure → déverrouillage (non suffisamment défini dans le v0.1.8 pour être inventé pendant le refactor).
 - Téléphone : actions sortantes appel/SMS et leurs résultats de gameplay ; écran Réglages du téléphone si conservé dans la conception finale.
-- Carte Leaflet + fog of war géographique persistant.
+- **Exploration géographique réelle** : le fog sait persister des zones explorées, mais le déplacement actuel du gameplay reste un graphe intérieur abstrait ; il faut encore relier les futurs déplacements extérieurs aux zones/corridors explorés.
+- **Position Maison exacte** : `[43.4053, 5.0548]` reste une approximation du secteur de départ et ne doit pas être considérée comme la coordonnée exacte du domicile.
+- Annotations cartographiques au stylet si cette mécanique est conservée ; elles devront rester manuelles et ne jamais révéler les états internes des lieux.
 - Migration contrôlée d'une sauvegarde v0.1.11 si nécessaire.
 - Unification thermique complète `world.weather` → environnement des lieux à traiter séparément afin de ne pas casser les régressions physiologie/périssables déjà validées.
 
