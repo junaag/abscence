@@ -1,3 +1,4 @@
+import { getPlayerEnvironment } from './location-environment';
 import type { GameState, NeedsState } from './model';
 import { clampNeeds } from './state';
 
@@ -72,11 +73,8 @@ export function environmentPhysiologyModifiers(temperatureC: number, humidityPer
 }
 
 export function effectivePhysiologyRates(state: GameState): { rates: NeedsState; environment: EnvironmentPhysiologyModifiers } {
-  const location = state.locations[state.player.locationId];
-  const environment = environmentPhysiologyModifiers(
-    location?.ambientTemperatureC ?? 20,
-    location?.ambientHumidityPercent ?? 50,
-  );
+  const playerEnvironment = getPlayerEnvironment(state);
+  const environment = environmentPhysiologyModifiers(playerEnvironment.temperatureC, playerEnvironment.humidityPct);
   return {
     environment,
     rates: {
