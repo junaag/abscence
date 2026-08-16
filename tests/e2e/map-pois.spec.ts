@@ -35,7 +35,7 @@ test('only discovered POIs render and a failed travel explains why instead of lo
   expect(poiPaneZ).toBeGreaterThan(fogPaneZ);
 
   await page.locator('.leaflet-marker-icon[title="Station Ingres"]').click();
-  const popup = page.locator('.leaflet-popup-content');
+  const popup = page.locator('.leaflet-popup-content').filter({ hasText: 'Station Ingres' });
   await expect(popup).toContainText('Automobile');
   await expect(popup).toContainText('Station service');
   await popup.getByRole('button', { name: 'S’y rendre' }).click();
@@ -56,12 +56,13 @@ test('the domicile is a normal residential POI and POI travel becomes real once 
   await expect(fog).toHaveAttribute('data-explored-corridors', '2');
 
   await page.locator('.leaflet-marker-icon[title="Station Ingres"]').click();
-  await page.locator('.leaflet-popup-content').getByRole('button', { name: 'S’y rendre' }).click();
+  const stationPopup = page.locator('.leaflet-popup-content').filter({ hasText: 'Station Ingres' });
+  await stationPopup.getByRole('button', { name: 'S’y rendre' }).click();
   await expect(page.locator('.place')).toHaveText('Station Ingres');
   await expect(fog).toHaveAttribute('data-explored-corridors', '3');
 
   await page.locator('.leaflet-marker-icon[title="Domicile"]').click();
-  const homePopup = page.locator('.leaflet-popup-content');
+  const homePopup = page.locator('.leaflet-popup-content').filter({ hasText: 'Domicile' });
   await expect(homePopup).toContainText('Résidentiel');
   await expect(homePopup).toContainText('Habitation');
   await homePopup.getByRole('button', { name: 'S’y rendre' }).click();
