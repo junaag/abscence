@@ -49,13 +49,52 @@ export interface LocationFeatures {
 }
 
 export type PoiSitePhase = 'outside' | 'inside';
+export type PoiSiteCategory = 'Industrie' | 'Commerce' | 'Santé' | 'Automobile' | 'Services publics' | 'Résidentiel' | 'Inconnu';
+export type PoiRiskKind = 'debris' | 'unstable_storage' | 'chemical' | 'electrical' | 'darkness';
+
+export interface PoiRiskState {
+  id: string;
+  kind: PoiRiskKind;
+  label: string;
+  description: string;
+  discovered: boolean;
+  resolved: boolean;
+  triggered: boolean;
+  secureSeconds: number;
+  painPenalty: number;
+  fatiguePenalty: number;
+  stressPenalty: number;
+}
+
+export interface PoiClueState {
+  id: string;
+  text: string;
+  discovered: boolean;
+}
+
+export interface PoiZoneState {
+  id: string;
+  name: string;
+  locked: boolean;
+  discovered: boolean;
+  surfaceRevealed: boolean;
+  searched: boolean;
+  risk?: PoiRiskState;
+  clue?: PoiClueState;
+}
 
 export interface PoiSiteState {
   sourceId: string;
+  category?: PoiSiteCategory;
+  typeLabel?: string;
   phase: PoiSitePhase;
   observed: boolean;
+  entranceLocked?: boolean;
+  entranceForced?: boolean;
   surfaceRevealed?: boolean;
   searched: boolean;
+  activeZoneId?: string;
+  zones?: PoiZoneState[];
 }
 
 export type WorldPosition =
@@ -106,6 +145,7 @@ export interface ItemState {
   name: string;
   location: ItemLocation;
   examined: boolean;
+  poiZoneId?: string;
   liquidMl?: number;
   capacityMl?: number;
   batteryPercent?: number;
@@ -281,7 +321,11 @@ export type ActionId =
   | 'TRAVEL_TO_MAP_POI'
   | 'WALK_TO_MAP_POINT'
   | 'OBSERVE_LOCATION'
+  | 'FORCE_POI_ACCESS'
   | 'ENTER_POI'
+  | 'MOVE_POI_ZONE'
+  | 'FORCE_POI_ZONE'
+  | 'SECURE_POI_RISK'
   | 'SEARCH_LOCATION'
   | 'LEAVE_POI'
   | 'OPEN_CONNECTION'
