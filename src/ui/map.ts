@@ -1,6 +1,22 @@
 import * as L from 'leaflet';
-import { DEFAULT_HOME_COORDINATES, normalizeMapUiState, updateMapViewport, type ExploredMapArea, type ExploredMapCorridor, type MapCoordinate, type MapUiState } from '../app/map-state';
-import { fetchOverpassPois, mapDistanceMeters, mapPoiCacheKey, MAP_POI_MAX_HOME_DISTANCE_M, MAP_POI_MIN_ZOOM, type MapPoi, type MapPoiCategory } from './map-pois';
+import {
+  DEFAULT_HOME_COORDINATES,
+  isMapPointExplored,
+  normalizeMapUiState,
+  updateMapViewport,
+  type ExploredMapArea,
+  type ExploredMapCorridor,
+  type MapCoordinate,
+  type MapUiState,
+} from '../app/map-state';
+import {
+  fetchOverpassPois,
+  mapDistanceMeters,
+  mapPoiCacheKey,
+  MAP_POI_MAX_HOME_DISTANCE_M,
+  MAP_POI_MIN_ZOOM,
+  type MapPoi,
+} from './map-pois';
 
 class FogCanvasLayer extends L.Layer {
   private canvas: HTMLCanvasElement | null = null;
@@ -90,13 +106,13 @@ class FogCanvasLayer extends L.Layer {
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
     context.clearRect(0, 0, size.x, size.y);
     context.globalCompositeOperation = 'source-over';
-    context.fillStyle = 'rgba(67,74,80,.97)';
+    context.fillStyle = 'rgba(62,68,73,.985)';
     context.fillRect(0, 0, size.x, size.y);
 
-    context.strokeStyle = 'rgba(255,255,255,.075)';
+    context.strokeStyle = 'rgba(255,255,255,.07)';
     context.lineWidth = 1;
     context.beginPath();
-    const spacing = 17;
+    const spacing = 15;
     for (let offset = -size.y; offset < size.x + size.y; offset += spacing) {
       context.moveTo(offset, 0);
       context.lineTo(offset - size.y, size.y);
@@ -117,14 +133,29 @@ class FogCanvasLayer extends L.Layer {
   }
 }
 
-const POI_SYMBOLS: Record<MapPoiCategory, string> = {
-  Industrie: '▦',
-  Commerce: '●',
-  Santé: '✚',
-  Automobile: '◆',
-  'Services publics': '+',
-  Résidentiel: '⌂',
-};
+function poiSymbol(poi: MapPoi): string {
+  switch (poi.typeLabel) {
+    case 'Habitation': return '🏠';
+    case 'Supermarché': return '🛒';
+    case 'Épicerie': return '🛒';
+    case 'Boulangerie': return '🥖';
+    case 'Primeur': return '🍎';
+    case 'Librairie': return '📚';
+    case 'Centre commercial': return '🏬';
+    case 'Pharmacie': return '💊';
+    case 'Hôpital': return '🏥';
+    case 'Clinique': return '🏥';
+    case 'Médecins': return '🩺';
+    case 'Station service': return '⛽';
+    case 'Garage / réparation auto': return '🔧';
+    case 'Police': return '🚓';
+    case 'Pompiers': return '🚒';
+    case 'Mairie': return '🏛️';
+    case 'Entrepôt': return '📦';
+    case 'Site industriel': return '🏭';
+    default: return '📍';
+  }
+}
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
@@ -139,59 +170,86 @@ function encodeTravelTarget(target: { id: string; name: string; lat: number; lng
   }));
 }
 
-function travelButton(label: string, encodedTarget: string, onTravel: (encodedTarget: string) => void): HTMLButtonElement {
+function actionButton(
+  label: string,
+  actionId: 'TRAVEL_TO_MAP_POI' | 'WALK_TO_MAP_POINT',
+  encodedTarget: string,
+  handler: (encodedTarget: string) => void,
+): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = label;
-  button.dataset.action = 'TRAVEL_TO_MAP_POI';
+  button.dataset.action = actionId;
   button.dataset.target = encodedTarget;
   button.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
-    onTravel(encodedTarget);
+    handler(encodedTarget);
   });
   return button;
 }
 
 function poiIcon(poi: MapPoi): L.DivIcon {
   const category = escapeHtml(poi.category);
+  const symbol = poiSymbol(poi);
   return L.divIcon({
-    className: 'absence-poi-marker',
-    html: `<span data-poi-category="${category}" aria-label="${category}">${POI_SYMBOLS[poi.category]}</span>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-    popupAnchor: [0, -14],
+    className: `absence-poi-marker absence-poi-${poi.category.toLowerCase().replaceAll(' ', '-').replaceAll('é', 'e')}`,
+    html: `<span data-poi-category="${category}" aria-label="${escapeHtml(`${poi.category} — ${poi.typeLabel}`)}">${symbol}</span>`,
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -19],
   });
 }
 
 function poiPopup(poi: MapPoi, onTravel: (encodedTarget: string) => void): HTMLElement {
   const popup = document.createElement('div');
   popup.className = 'map-popup poi-popup';
-
   const category = document.createElement('strong');
   category.textContent = poi.category;
   const name = document.createElement('span');
   name.textContent = poi.name;
   const type = document.createElement('small');
   type.textContent = poi.typeLabel;
-  popup.append(category, name, type, travelButton('S’y rendre', encodeTravelTarget(poi), onTravel));
+  popup.append(category, name, type, actionButton('S’y rendre', 'TRAVEL_TO_MAP_POI', encodeTravelTarget(poi), onTravel));
   return popup;
 }
 
-function homePopup(onTravel: (encodedTarget: string) => void): HTMLElement {
+function walkPopup(point: MapCoordinate, onWalk: (encodedTarget: string) => void): HTMLElement {
   const popup = document.createElement('div');
-  popup.className = 'map-popup';
+  popup.className = 'map-popup walk-popup';
   const title = document.createElement('strong');
-  title.textContent = 'Maison';
-  const target = encodeTravelTarget({ id: 'home', name: 'Maison', ...DEFAULT_HOME_COORDINATES });
-  popup.append(title, travelButton('Revenir à la maison', target, onTravel));
+  title.textContent = 'Déplacement à pied';
+  const note = document.createElement('small');
+  note.textContent = 'Avancer progressivement dans le quartier.';
+  const target = encodeTravelTarget({ id: 'walk', name: 'Rue / extérieur', lat: point.lat, lng: point.lng });
+  popup.append(title, note, actionButton('Marcher ici', 'WALK_TO_MAP_POINT', target, onWalk));
   return popup;
+}
+
+function homePoi(): MapPoi {
+  return {
+    id: 'home',
+    name: 'Domicile',
+    category: 'Résidentiel',
+    typeLabel: 'Habitation',
+    lat: DEFAULT_HOME_COORDINATES.lat,
+    lng: DEFAULT_HOME_COORDINATES.lng,
+  };
+}
+
+function playerIcon(): L.DivIcon {
+  return L.divIcon({
+    className: 'absence-player-marker',
+    html: '<span aria-label="Votre position"></span>',
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
 }
 
 export interface MapController {
   attach(slot: HTMLElement): void;
   detach(): void;
-  sync(state: MapUiState): void;
+  sync(state: MapUiState, playerPosition?: MapCoordinate | null): void;
   getState(): MapUiState;
   destroy(): void;
 }
@@ -200,18 +258,23 @@ export function createMapController(
   initialState: MapUiState,
   persist: (state: MapUiState) => void,
   onTravel: (encodedTarget: string) => void = () => undefined,
+  onWalk: (encodedTarget: string) => void = () => undefined,
+  initialPlayerPosition: MapCoordinate | null = null,
 ): MapController {
   const host = document.createElement('div');
   host.className = 'leaflet-map';
   host.dataset.testid = 'leaflet-map';
   let state = normalizeMapUiState(initialState);
+  let playerPosition = initialPlayerPosition ? { ...initialPlayerPosition } : null;
   let map: L.Map | null = null;
   let fog: FogCanvasLayer | null = null;
   let poiLayer: L.LayerGroup | null = null;
+  let playerMarker: L.Marker | null = null;
   let hideTimer: number | null = null;
   let poiTimer: number | null = null;
   let poiAbort: AbortController | null = null;
   let poiRequestSequence = 0;
+  let lastPois: MapPoi[] = [];
   const poiCache = new Map<string, MapPoi[]>();
 
   const startInteraction = (): void => {
@@ -229,10 +292,37 @@ export function createMapController(
     persist(structuredClone(state));
   };
 
+  const renderPlayer = (): void => {
+    if (!map) return;
+    if (!playerPosition) {
+      playerMarker?.remove();
+      playerMarker = null;
+      return;
+    }
+    if (!playerMarker) {
+      playerMarker = L.marker([playerPosition.lat, playerPosition.lng], {
+        icon: playerIcon(),
+        pane: 'playerPane',
+        keyboard: false,
+        interactive: false,
+        zIndexOffset: 2000,
+      }).addTo(map);
+    } else {
+      playerMarker.setLatLng([playerPosition.lat, playerPosition.lng]);
+    }
+  };
+
   const renderPois = (pois: readonly MapPoi[]): void => {
     if (!map || !poiLayer) return;
+    lastPois = structuredClone(pois);
     poiLayer.clearLayers();
-    for (const poi of pois) {
+    const home = homePoi();
+    const candidates = [
+      home,
+      ...pois.filter((poi) => poi.id !== 'home' && mapDistanceMeters(poi, home) >= 35),
+    ];
+    for (const poi of candidates) {
+      if (!isMapPointExplored(state, poi)) continue;
       L.marker([poi.lat, poi.lng], { icon: poiIcon(poi), pane: 'poiPane', keyboard: true, title: poi.name })
         .bindPopup(poiPopup(poi, onTravel))
         .addTo(poiLayer);
@@ -293,7 +383,7 @@ export function createMapController(
     }
   };
 
-  const schedulePoiLoad = (delayMs = 900): void => {
+  const schedulePoiLoad = (delayMs = 700): void => {
     if (poiTimer !== null) window.clearTimeout(poiTimer);
     poiTimer = window.setTimeout(() => { void loadPois(); }, delayMs);
   };
@@ -301,9 +391,10 @@ export function createMapController(
   const ensureMap = (): void => {
     if (map) return;
     map = L.map(host, { zoomControl: false, preferCanvas: true, minZoom: 3, maxZoom: 20 }).setView([state.center.lat, state.center.lng], state.zoom);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
       maxZoom: 20,
-      attribution: '&copy; OpenStreetMap contributors',
+      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
       updateWhenIdle: true,
       keepBuffer: 2,
     }).addTo(map);
@@ -313,14 +404,21 @@ export function createMapController(
     fogPane.style.pointerEvents = 'none';
     const poiPane = map.createPane('poiPane');
     poiPane.style.zIndex = '650';
+    const playerPane = map.createPane('playerPane');
+    playerPane.style.zIndex = '700';
+    playerPane.style.pointerEvents = 'none';
     fog = new FogCanvasLayer(state.explored, state.exploredCorridors).addTo(map);
     poiLayer = L.layerGroup().addTo(map);
+    renderPois([]);
+    renderPlayer();
 
-    const homeIcon = L.divIcon({ className: 'absence-home-marker', html: '<span aria-label="Maison">🏠</span>', iconSize: [36, 36], iconAnchor: [18, 18] });
-    L.marker([DEFAULT_HOME_COORDINATES.lat, DEFAULT_HOME_COORDINATES.lng], { icon: homeIcon, zIndexOffset: 1000 })
-      .addTo(map)
-      .bindPopup(homePopup(onTravel));
-
+    map.on('click', (event) => {
+      const point = { lat: event.latlng.lat, lng: event.latlng.lng };
+      L.popup({ closeButton: true, autoPan: true })
+        .setLatLng(event.latlng)
+        .setContent(walkPopup(point, onWalk))
+        .openOn(map!);
+    });
     map.on('movestart zoomstart', startInteraction);
     map.on('moveend zoomend', endInteraction);
     map.on('moveend zoomend', saveViewport);
@@ -332,6 +430,8 @@ export function createMapController(
       ensureMap();
       if (host.parentElement !== slot) slot.append(host);
       fog?.setExploration(state.explored, state.exploredCorridors);
+      renderPois(lastPois);
+      renderPlayer();
       window.requestAnimationFrame(() => {
         map?.invalidateSize({ animate: false });
         schedulePoiLoad();
@@ -342,9 +442,12 @@ export function createMapController(
       host.remove();
       document.body.classList.remove('map-moving');
     },
-    sync(nextState): void {
+    sync(nextState, nextPlayerPosition): void {
       state = normalizeMapUiState(nextState);
+      if (nextPlayerPosition !== undefined) playerPosition = nextPlayerPosition ? { ...nextPlayerPosition } : null;
       fog?.setExploration(state.explored, state.exploredCorridors);
+      renderPois(lastPois);
+      renderPlayer();
       if (map) map.setView([state.center.lat, state.center.lng], state.zoom, { animate: false });
       schedulePoiLoad();
     },
@@ -359,6 +462,7 @@ export function createMapController(
       map = null;
       fog = null;
       poiLayer = null;
+      playerMarker = null;
       host.remove();
     },
   };
