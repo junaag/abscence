@@ -259,6 +259,7 @@ export interface GameState {
 
 export type ActionId =
   | 'MOVE'
+  | 'TRAVEL_TO_MAP_POI'
   | 'OPEN_CONNECTION'
   | 'OPEN_CONTAINER'
   | 'TAKE_ITEM'
