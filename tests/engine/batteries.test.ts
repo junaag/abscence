@@ -24,7 +24,7 @@ describe('generic battery resources from engine v0.1.8', () => {
   });
 
   it('blocks use at 0% charge', () => {
-    let state = takePhone(createInitialState());
+    const state = takePhone(createInitialState());
     if (!state.items.phone_01) throw new Error('missing phone');
     state.items.phone_01.batteryPercent = 0;
     const result = performAction(state, { id: 'USE_ITEM', targetId: 'phone_01' });
