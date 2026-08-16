@@ -1,5 +1,5 @@
 import { getItemDefinition } from '../../content/items';
-import { applyPhysicalExertion, scalePhysicalDuration } from '../encumbrance';
+import { applyPhysicalExertion, getEncumbranceProfile, scalePhysicalDuration } from '../encumbrance';
 import type { EngineTransition, GameState, ItemState, LocationState, PoiRiskState, PoiZoneState } from '../model';
 import { getDistanceMeters } from '../perception';
 import { createPoiSiteState, ensurePoiSiteStructure, getActivePoiZone, getPoiLootDefinitionIds, getPoiZone, stablePoiHash } from '../poi-sites';
@@ -39,6 +39,11 @@ function mapBlocked(state: GameState): EngineTransition | null {
   return currentPoi(state)?.poiSite?.phase === 'inside'
     ? failure(state, 'Vous êtes à l’intérieur', 'Sortez d’abord avant de reprendre votre déplacement.')
     : null;
+}
+
+function loadNote(state: GameState): string {
+  const p = getEncumbranceProfile(state);
+  return p.tier === 'light' ? '' : ` ${p.label}.`;
 }
 
 function createLoot(locationId: string, sourceId: string, zoneId: string, layer: 'surface' | 'deep', index: number, definitionId: string): ItemState {
@@ -186,7 +191,7 @@ export function searchLocation(state: GameState): EngineTransition {
   if (nextZone.clue && !nextZone.clue.discovered) { nextZone.clue.discovered = true; clue = ` Indice : ${nextZone.clue.text}`; }
   advanceTime(next, seconds); applyPhysicalExertion(next, seconds, 0.75);
   const minutes = Math.max(1, Math.round(seconds / 60));
-  return success(next, `Vous fouillez ${nextZone.name.toLowerCase()} méthodiquement.`, `${found.length ? `Après environ ${minutes} minutes, vous découvrez ${found.join(', ')}.` : `Après environ ${minutes} minutes, rien d’exploitable.`}${incident}${clue}`, seconds);
+  return success(next, `Vous fouillez ${nextZone.name.toLowerCase()} méthodiquement.`, `${found.length ? `Après environ ${minutes} minutes, vous découvrez ${found.join(', ')}.` : `Après environ ${minutes} minutes, rien d’exploitable.`}${incident}${clue}${loadNote(state)}`, seconds);
 }
 
 export function leavePoi(state: GameState): EngineTransition {
@@ -209,7 +214,7 @@ export function walkToMapPoint(state: GameState, encodedTarget: string | undefin
   const seconds = scalePhysicalDuration(state, Math.max(2, Math.round(meters / 1.25)), 'movement'), next = cloneState(state), origin = next.locations[state.player.locationId];
   next.locations.map_walk_position = { id: 'map_walk_position', name: 'Rue / extérieur', ambientTemperatureC: origin?.ambientTemperatureC ?? 20, ambientHumidityPercent: origin?.ambientHumidityPercent ?? 50, ventilation: 1, features: {}, position: { lat: target.lat, lon: target.lon } };
   next.player.locationId = 'map_walk_position'; recordLocationVisit(next, 'map_walk_position'); advanceTime(next, seconds); applyPhysicalExertion(next, seconds, 1);
-  return success(next, 'Vous avancez à pied.', `Vous parcourez environ ${Math.max(1, Math.round(meters))} m.`, seconds);
+  return success(next, 'Vous avancez à pied.', `Vous parcourez environ ${Math.max(1, Math.round(meters))} m.${loadNote(state)}`, seconds);
 }
 
 export function travelToMapPoi(state: GameState, encodedTarget: string | undefined): EngineTransition {
@@ -234,5 +239,5 @@ export function travelToMapPoi(state: GameState, encodedTarget: string | undefin
     else { ensurePoiSiteStructure(existing.poiSite); if (target.typeLabel && !existing.poiSite.typeLabel) existing.poiSite.typeLabel = target.typeLabel; }
   }
   next.player.locationId = destinationId; recordLocationVisit(next, destinationId); advanceTime(next, seconds); applyPhysicalExertion(next, seconds, 1);
-  return success(next, target.id === 'home' ? 'Retour au domicile' : target.name, `Vous parcourez environ ${Math.max(1, Math.round(meters))} m à pied.`, seconds);
+  return success(next, target.id === 'home' ? 'Retour au domicile' : target.name, `Vous parcourez environ ${Math.max(1, Math.round(meters))} m à pied.${loadNote(state)}`, seconds);
 }
