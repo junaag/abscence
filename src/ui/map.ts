@@ -281,7 +281,10 @@ export function createMapController(
     lastPois = [...pois].map((poi) => ({ ...poi }));
     poiLayer.clearLayers();
     const home = homePoi();
-    const candidates = [home, ...pois.filter((poi) => poi.id !== 'home' && mapDistanceMeters(poi, home) >= 35)];
+    const candidates = [
+      home,
+      ...pois.filter((poi) => poi.id !== 'home' && !(poi.category === 'Résidentiel' && mapDistanceMeters(poi, home) < 35)),
+    ];
     for (const poi of candidates) {
       if (!isMapPointExplored(state, poi)) continue;
       L.marker([poi.lat, poi.lng], { icon: poiIcon(poi), pane: 'poiPane', keyboard: true, title: poi.name, bubblingMouseEvents: false })
