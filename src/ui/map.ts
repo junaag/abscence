@@ -129,13 +129,27 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
 }
 
-function encodedTravelTarget(target: { id: string; name: string; lat: number; lng: number }): string {
-  return escapeHtml(encodeURIComponent(JSON.stringify({
+function encodeTravelTarget(target: { id: string; name: string; lat: number; lng: number }): string {
+  return encodeURIComponent(JSON.stringify({
     id: target.id,
     name: target.name,
     lat: target.lat,
     lon: target.lng,
-  })));
+  }));
+}
+
+function travelButton(label: string, encodedTarget: string, onTravel: (encodedTarget: string) => void): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = label;
+  button.dataset.action = 'TRAVEL_TO_MAP_POI';
+  button.dataset.target = encodedTarget;
+  button.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onTravel(encodedTarget);
+  });
+  return button;
 }
 
 function poiIcon(poi: MapPoi): L.DivIcon {
@@ -149,9 +163,28 @@ function poiIcon(poi: MapPoi): L.DivIcon {
   });
 }
 
-function poiPopup(poi: MapPoi): string {
-  const target = encodedTravelTarget(poi);
-  return `<div class="map-popup poi-popup"><strong>${escapeHtml(poi.category)}</strong><span>${escapeHtml(poi.name)}</span><small>${escapeHtml(poi.typeLabel)}</small><button type="button" data-action="TRAVEL_TO_MAP_POI" data-target="${target}">S’y rendre</button></div>`;
+function poiPopup(poi: MapPoi, onTravel: (encodedTarget: string) => void): HTMLElement {
+  const popup = document.createElement('div');
+  popup.className = 'map-popup poi-popup';
+
+  const category = document.createElement('strong');
+  category.textContent = poi.category;
+  const name = document.createElement('span');
+  name.textContent = poi.name;
+  const type = document.createElement('small');
+  type.textContent = poi.typeLabel;
+  popup.append(category, name, type, travelButton('S’y rendre', encodeTravelTarget(poi), onTravel));
+  return popup;
+}
+
+function homePopup(onTravel: (encodedTarget: string) => void): HTMLElement {
+  const popup = document.createElement('div');
+  popup.className = 'map-popup';
+  const title = document.createElement('strong');
+  title.textContent = 'Maison';
+  const target = encodeTravelTarget({ id: 'home', name: 'Maison', ...DEFAULT_HOME_COORDINATES });
+  popup.append(title, travelButton('Revenir à la maison', target, onTravel));
+  return popup;
 }
 
 export interface MapController {
@@ -162,7 +195,11 @@ export interface MapController {
   destroy(): void;
 }
 
-export function createMapController(initialState: MapUiState, persist: (state: MapUiState) => void): MapController {
+export function createMapController(
+  initialState: MapUiState,
+  persist: (state: MapUiState) => void,
+  onTravel: (encodedTarget: string) => void = () => undefined,
+): MapController {
   const host = document.createElement('div');
   host.className = 'leaflet-map';
   host.dataset.testid = 'leaflet-map';
@@ -196,7 +233,7 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     poiLayer.clearLayers();
     for (const poi of pois) {
       L.marker([poi.lat, poi.lng], { icon: poiIcon(poi), pane: 'poiPane', keyboard: true, title: poi.name })
-        .bindPopup(poiPopup(poi))
+        .bindPopup(poiPopup(poi, onTravel))
         .addTo(poiLayer);
     }
   };
@@ -279,10 +316,9 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     poiLayer = L.layerGroup().addTo(map);
 
     const homeIcon = L.divIcon({ className: 'absence-home-marker', html: '<span aria-label="Maison">🏠</span>', iconSize: [36, 36], iconAnchor: [18, 18] });
-    const homeTarget = encodedTravelTarget({ id: 'home', name: 'Maison', ...DEFAULT_HOME_COORDINATES });
     L.marker([DEFAULT_HOME_COORDINATES.lat, DEFAULT_HOME_COORDINATES.lng], { icon: homeIcon, zIndexOffset: 1000 })
       .addTo(map)
-      .bindPopup(`<div class="map-popup"><strong>Maison</strong><button type="button" data-action="TRAVEL_TO_MAP_POI" data-target="${homeTarget}">Revenir à la maison</button></div>`);
+      .bindPopup(homePopup(onTravel));
 
     map.on('movestart zoomstart', startInteraction);
     map.on('moveend zoomend', endInteraction);
