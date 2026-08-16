@@ -87,7 +87,11 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     if (mapController) return Promise.resolve(mapController);
     if (!mapControllerPromise) {
       mapControllerPromise = import('./map').then(({ createMapController }) => {
-        const controller = createMapController(mapState, persistMapState);
+        const controller = createMapController(
+          mapState,
+          persistMapState,
+          (encodedTarget) => execute({ id: 'TRAVEL_TO_MAP_POI', targetId: encodedTarget }),
+        );
         mapController = controller;
         return controller;
       });
