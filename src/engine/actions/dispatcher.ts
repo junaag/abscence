@@ -3,6 +3,7 @@ import type { ActionId, EngineTransition, GameAction, GameState } from '../model
 import { openContainer } from './containers';
 import { chargeItem, drinkItem, eatItem, examineItem, fillLiquidContainer, takeItem, useItem } from './items';
 import { move, openConnection } from './movement';
+import { callContact, sendSmsContact } from './phone';
 import { douseEffect, drinkTap, mopEffect, shoutForWife, silenceEffect, stopLeak, ventilateEffect, wait } from './world';
 
 function assertNever(value: never): never {
@@ -23,6 +24,8 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
     case 'USE_ITEM': return useItem(state, action.targetId);
     case 'CHARGE_ITEM': return chargeItem(state, action.targetId, action.sourceId, action.seconds);
     case 'EXAMINE_ITEM': return examineItem(state, action.targetId);
+    case 'CALL_CONTACT': return callContact(state, action.targetId);
+    case 'SEND_SMS_CONTACT': return sendSmsContact(state, action.targetId);
     case 'MOP_EFFECT': return mopEffect(state, action.targetId, action.sourceId);
     case 'VENTILATE_EFFECT': return ventilateEffect(state, action.targetId);
     case 'DOUSE_EFFECT': return douseEffect(state, action.targetId, action.sourceId);
