@@ -19,6 +19,23 @@ test('container opens in popup and reveals contents immediately', async ({ page 
   await expect(page.getByText('Petite clé', { exact: true })).toBeVisible();
 });
 
+test('closing a container popup naturally closes the container', async ({ page }) => {
+  await page.getByRole('button', { name: /Aller vers Cuisine/ }).click();
+  await page.getByRole('button', { name: /Réfrigérateur/ }).click();
+  await page.getByRole('button', { name: /^Ouvrir/ }).click();
+  await expect(page.getByRole('dialog')).toContainText('Ouvert');
+  await page.getByRole('button', { name: '×' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Réfrigérateur.*Fermé/ })).toBeVisible();
+});
+
+test('using the phone from its object popup opens the phone interface', async ({ page }) => {
+  await page.getByRole('button', { name: /Inventaire/ }).click();
+  await page.getByRole('button', { name: /Téléphone/ }).click();
+  await page.getByRole('button', { name: /^Utiliser/ }).click();
+  await expect(page.getByTestId('phone-view')).toBeVisible();
+});
+
 test('phone restores local calls and messages with engine battery and network status', async ({ page }) => {
   await page.getByRole('button', { name: /Téléphone/ }).click();
   await expect(page.getByTestId('phone-view')).toBeVisible();
