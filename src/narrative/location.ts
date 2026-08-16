@@ -36,7 +36,8 @@ function visitCount(state: GameState, locationId: string): number {
  * Kept as an API compatibility point, but the situation panel no longer gives
  * the player a recommended next action. Exploration must remain self-directed.
  */
-export function describeImmediateConcern(_state: GameState): string {
+export function describeImmediateConcern(state: GameState): string {
+  void state;
   return '';
 }
 
