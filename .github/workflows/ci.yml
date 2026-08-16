@@ -1,0 +1,101 @@
+name: CI
+
+on:
+  pull_request:
+    branches: ['main']
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run integrity
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build:bundle
+      - name: Package validated v0.2 preview bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: v020-preview
+          path: dist/
+          if-no-files-found: error
+          retention-days: 3
+
+  e2e-mobile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: quality
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - name: Upload Playwright failure diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: playwright-mobile-failure-${{ github.run_id }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  deploy-preview:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'refactor/v020-migration-clean' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [quality, e2e-mobile]
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout stable publishing branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Download the exact validated bundle
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: v020-preview
+          path: .preview-dist
+      - name: Replace only the isolated preview directory
+        env:
+          PREVIEW_SOURCE_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          rm -rf v020-preview
+          mkdir -p v020-preview
+          cp -R .preview-dist/. v020-preview/
+          rm -rf .preview-dist
+          printf '%s\n' "$PREVIEW_SOURCE_SHA" > v020-preview/BUILD.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add v020-preview
+          if git diff --cached --quiet; then
+            echo "Preview already matches the validated bundle."
+            exit 0
+          fi
+          git commit -m "Deploy validated v0.2 preview ${PREVIEW_SOURCE_SHA}"
+          git push origin HEAD:main
