@@ -17,6 +17,7 @@ import {
   MAP_POI_MIN_ZOOM,
   type MapPoi,
 } from './map-pois';
+import { buildPoiBlueprint } from './poi-content';
 
 class FogCanvasLayer extends L.Layer {
   private canvas: HTMLCanvasElement | null = null;
@@ -161,7 +162,10 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
 }
 
-function encodeTravelTarget(target: { id: string; name: string; lat: number; lng: number; category?: string; typeLabel?: string }): string {
+type TravelTarget = { id: string; name: string; lat: number; lng: number; category?: MapPoi['category']; typeLabel?: string };
+
+function encodeTravelTarget(target: TravelTarget): string {
+  const hasProfile = target.category !== undefined && target.typeLabel !== undefined;
   return encodeURIComponent(JSON.stringify({
     id: target.id,
     name: target.name,
@@ -169,6 +173,7 @@ function encodeTravelTarget(target: { id: string; name: string; lat: number; lng
     lon: target.lng,
     ...(target.category ? { category: target.category } : {}),
     ...(target.typeLabel ? { typeLabel: target.typeLabel } : {}),
+    ...(hasProfile ? { blueprint: buildPoiBlueprint(target as MapPoi) } : {}),
   }));
 }
 
