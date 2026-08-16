@@ -25,11 +25,13 @@ export const INITIAL_STATE: GameState = {
   locations: {
     bedroom: { id: 'bedroom', name: 'Chambre', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.15, features: {}, position: { x: 0, y: 0 } },
     kitchen: { id: 'kitchen', name: 'Cuisine', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 0.18, features: { tap: true, powerOutlet: true }, position: { x: 10, y: 0 } },
-    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 1, features: {}, position: { x: 20, y: 0 } },
+    garden: { id: 'garden', name: 'Jardin', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 1, features: {}, position: { lat: 43.40528, lon: 5.05495 } },
+    street: { id: 'street', name: 'Rue devant la maison', ambientTemperatureC: 20, ambientHumidityPercent: 50, ventilation: 1, features: {}, position: { lat: 43.40512, lon: 5.05464 } },
   },
   connections: {
     bedroom_kitchen: { id: 'bedroom_kitchen', a: 'bedroom', b: 'kitchen', type: 'door', open: true, locked: false, openSeconds: 2, travelSeconds: 12 },
     kitchen_garden: { id: 'kitchen_garden', a: 'kitchen', b: 'garden', type: 'door', open: true, locked: false, openSeconds: 2, travelSeconds: 10 },
+    garden_street: { id: 'garden_street', a: 'garden', b: 'street', type: 'door', open: false, locked: false, openSeconds: 5, travelSeconds: 45 },
   },
   containers: {
     bedroom_drawer: { id: 'bedroom_drawer', definitionId: 'drawer', name: 'Tiroir de la table de nuit', locationId: 'bedroom', open: false, locked: false, contentIds: ['spare_key_01'] },
