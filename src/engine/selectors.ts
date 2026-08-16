@@ -30,8 +30,17 @@ export function containersAtCurrentLocation(state: GameState): ContainerState[] 
   return Object.values(state.containers).filter((container) => container.locationId === state.player.locationId);
 }
 
+function itemVisibleInActivePoiZone(state: GameState, item: ItemState): boolean {
+  if (!item.poiZoneId) return true;
+  const location = state.locations[state.player.locationId];
+  const site = location?.poiSite;
+  return Boolean(site?.phase === 'inside' && site.activeZoneId === item.poiZoneId);
+}
+
 export function looseItemsAtCurrentLocation(state: GameState): ItemState[] {
-  return Object.values(state.items).filter((item) => item.location.kind === 'location' && item.location.id === state.player.locationId);
+  return Object.values(state.items).filter((item) => item.location.kind === 'location'
+    && item.location.id === state.player.locationId
+    && itemVisibleInActivePoiZone(state, item));
 }
 
 export function inventoryItems(state: GameState): ItemState[] {
@@ -85,7 +94,9 @@ export function isItemAccessible(state: GameState, itemId: string): boolean {
   const item = state.items[itemId];
   if (!item) return false;
   if (item.location.kind === 'inventory') return true;
-  if (item.location.kind === 'location') return item.location.id === state.player.locationId;
+  if (item.location.kind === 'location') {
+    return item.location.id === state.player.locationId && itemVisibleInActivePoiZone(state, item);
+  }
   if (item.location.kind === 'container') {
     const container = state.containers[item.location.id];
     return Boolean(container && container.locationId === state.player.locationId && container.open);
