@@ -84,5 +84,6 @@ export function describeCurrentLocation(state: GameState): string {
   }
 
   const silence = persistentSilence(state);
-  return effectText ? `${base}${silence} ${effectText}` : `${base}${silence}`;
+  const scene = effectText ? `${base}${silence} ${effectText}` : `${base}${silence}`;
+  return `${scene} ${describeImmediateConcern(state)}`;
 }
