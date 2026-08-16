@@ -11,11 +11,13 @@ const EXPECTED_RUNTIME_EXPORTS = [
   'getContextActions',
   'getItemActions',
   'getMobileNetworkState',
+  'getPhoneCapabilities',
   'getWeatherState',
   'inventoryItems',
   'looseItemsAtCurrentLocation',
   'performAction',
   'phoneCalls',
+  'phoneContacts',
   'phoneDeviceItemId',
   'phoneMessages',
 ] as const;
