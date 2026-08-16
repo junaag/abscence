@@ -69,19 +69,25 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
   const actions: ActionOption[] = [];
   const inInventory = item.location.kind === 'inventory';
   const definition = getItemDefinition(item.definitionId);
+  const kind = itemKind(item);
+
+  if (kind === 'food') {
+    actions.push({ id: 'EAT_ITEM', targetId: itemId, label: 'Manger', detail: inInventory ? undefined : 'Manger directement sans ranger l’objet.' });
+  }
+
+  if (kind === 'liquid-container') {
+    const liquidMl = item.liquidMl ?? 0;
+    const capacityMl = item.capacityMl ?? 0;
+    const amount = Math.min(WATER_RULES.servingMl, liquidMl);
+    if (liquidMl > 0) actions.push({ id: 'DRINK_ITEM', targetId: itemId, amountMl: amount, label: 'Boire', detail: `${amount} ml` });
+    if (inInventory && hasRunningTap(state) && capacityMl > liquidMl) {
+      actions.push({ id: 'FILL_LIQUID_CONTAINER', targetId: itemId, label: 'Remplir au robinet', detail: `${liquidMl}/${capacityMl} ml` });
+    }
+  }
+
   if (!inInventory && definition?.portable !== false) actions.push({ id: 'TAKE_ITEM', targetId: itemId, label: 'Prendre' });
 
   if (inInventory) {
-    if (itemKind(item) === 'food') actions.push({ id: 'EAT_ITEM', targetId: itemId, label: 'Manger' });
-
-    if (itemKind(item) === 'liquid-container') {
-      const liquidMl = item.liquidMl ?? 0;
-      const capacityMl = item.capacityMl ?? 0;
-      const amount = Math.min(WATER_RULES.servingMl, liquidMl);
-      if (liquidMl > 0) actions.push({ id: 'DRINK_ITEM', targetId: itemId, amountMl: amount, label: 'Boire', detail: `${amount} ml` });
-      if (hasRunningTap(state) && capacityMl > liquidMl) actions.push({ id: 'FILL_LIQUID_CONTAINER', targetId: itemId, label: 'Remplir au robinet', detail: `${liquidMl}/${capacityMl} ml` });
-    }
-
     if (definition?.usable && (!definition.battery || (item.batteryPercent ?? definition.battery.initialChargePct) > 0)) {
       const label = definition.usable.toggleEnabled ? (item.enabled ? 'Éteindre' : 'Allumer') : 'Utiliser';
       const option: ActionOption = { id: 'USE_ITEM', targetId: itemId, label };
