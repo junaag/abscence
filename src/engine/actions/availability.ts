@@ -1,7 +1,8 @@
 import { getItemDefinition } from '../../content/items';
-import { getEncumbranceProfile, scalePhysicalDuration } from '../encumbrance';
+import { scalePhysicalDuration } from '../encumbrance';
 import { activeEffectsAt } from '../effects';
 import type { ActionOption, GameState, ItemState } from '../model';
+import { getActivePoiZone, poiZones } from '../poi-sites';
 import { WATER_RULES } from '../rules';
 import {
   connectedDestinations,
@@ -29,6 +30,10 @@ function durationLabel(seconds: number): string {
   return `${minutes} min`;
 }
 
+function carriesCrowbar(state: GameState): boolean {
+  return inventoryItems(state).some((item) => item.definitionId === 'crowbar');
+}
+
 export function getContextActions(state: GameState): ActionOption[] {
   const actions: ActionOption[] = [];
   for (const { connection, location } of connectedDestinations(state)) {
@@ -48,14 +53,56 @@ export function getContextActions(state: GameState): ActionOption[] {
     if (site.phase === 'outside') {
       if (!site.observed) {
         actions.push({ id: 'OBSERVE_LOCATION', label: 'Observer les lieux', detail: 'Examiner les abords et les accès visibles. · 25 s' });
+      } else if (site.entranceLocked) {
+        const base = carriesCrowbar(state) ? Math.round(4 * 60 * 0.45) : 4 * 60;
+        const seconds = scalePhysicalDuration(state, base, 'action');
+        actions.push({
+          id: 'FORCE_POI_ACCESS',
+          label: 'Forcer l’accès',
+          detail: `${carriesCrowbar(state) ? 'Utiliser le pied-de-biche.' : 'Sans outil adapté : lent, bruyant et risqué.'} · ${durationLabel(seconds)}`,
+        });
       } else {
         const seconds = scalePhysicalDuration(state, 12, 'action');
         actions.push({ id: 'ENTER_POI', label: 'Entrer', detail: `Découvrir ce qui est immédiatement visible. · ${durationLabel(seconds)}` });
       }
     } else {
-      if (!site.searched) {
+      const activeZone = getActivePoiZone(site);
+      if (activeZone?.risk?.discovered && !activeZone.risk.resolved) {
+        const seconds = scalePhysicalDuration(state, activeZone.risk.secureSeconds, 'action');
+        actions.push({
+          id: 'SECURE_POI_RISK',
+          label: 'Sécuriser la zone',
+          detail: `${activeZone.risk.label}. Réduire le risque avant de fouiller. · ${durationLabel(seconds)}`,
+        });
+      }
+      if (activeZone && !activeZone.searched) {
         const seconds = scalePhysicalDuration(state, 12 * 60, 'action');
-        actions.push({ id: 'SEARCH_LOCATION', label: 'Fouiller méthodiquement', detail: `Inspecter en profondeur les zones accessibles. · ${durationLabel(seconds)}` });
+        actions.push({
+          id: 'SEARCH_LOCATION',
+          label: `Fouiller ${activeZone.name.toLowerCase()} méthodiquement`,
+          detail: `Inspection approfondie de cette zone. · ${durationLabel(seconds)}`,
+        });
+      }
+      for (const zone of poiZones(site)) {
+        if (zone.id === activeZone?.id) continue;
+        if (zone.locked) {
+          const base = carriesCrowbar(state) ? Math.round(3 * 60 * 0.45) : 3 * 60;
+          const seconds = scalePhysicalDuration(state, base, 'action');
+          actions.push({
+            id: 'FORCE_POI_ZONE',
+            targetId: zone.id,
+            label: `Forcer l’accès vers ${zone.name.toLowerCase()}`,
+            detail: `${carriesCrowbar(state) ? 'Le pied-de-biche facilitera l’ouverture.' : 'Accès verrouillé.'} · ${durationLabel(seconds)}`,
+          });
+        } else {
+          const seconds = scalePhysicalDuration(state, 18, 'action');
+          actions.push({
+            id: 'MOVE_POI_ZONE',
+            targetId: zone.id,
+            label: `Explorer ${zone.name.toLowerCase()}`,
+            detail: `${zone.searched ? 'Zone déjà fouillée.' : 'Changer de zone intérieure.'} · ${durationLabel(seconds)}`,
+          });
+        }
       }
       const leaveSeconds = scalePhysicalDuration(state, 8, 'action');
       actions.push({ id: 'LEAVE_POI', label: 'Sortir', detail: `Revenir à l’extérieur. · ${durationLabel(leaveSeconds)}` });
@@ -149,5 +196,3 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
 
   return actions;
 }
-
-void getEncumbranceProfile;
