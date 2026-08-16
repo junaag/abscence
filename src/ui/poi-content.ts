@@ -1,7 +1,7 @@
 import type { MapPoi, MapPoiCategory } from './map-pois';
 
 type Risk = readonly [string, string, string, number, number, number, number];
-type Zone = readonly [string, string, boolean, readonly string[], readonly string[], Risk?, string?];
+type Zone = readonly [string, string, boolean, readonly string[], readonly string[], (Risk | undefined)?, string?];
 export type PoiBlueprint = readonly [boolean, readonly Zone[]];
 
 const GLASS: Risk = ['debris', 'Verre et débris au sol', 'Du verre et des objets renversés rendent la fouille risquée.', 90, 1.5, 1, 1];
