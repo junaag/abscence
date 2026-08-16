@@ -25,12 +25,12 @@ describe('persistent world effects restored from v0.1.9', () => {
     expect(findActiveEffect(state, 'water_puddle', 'garden')).toBeUndefined();
   });
 
-  it('applies local persistent-noise stress and natural noise decay', () => {
+  it('applies local persistent-noise stress and natural noise decay from the revised baseline', () => {
     const state = createInitialState();
     addPersistentEffect(state, 'persistent_noise', 'bedroom', 58, { source: 'unattended_device' });
     advanceTime(state, 60);
     expect(findActiveEffect(state, 'persistent_noise', 'bedroom')?.intensity).toBeCloseTo(57.88, 6);
-    expect(state.player.needs.stress).toBeCloseTo(23.447, 6);
+    expect(state.player.needs.stress).toBeCloseTo(17.447, 6);
   });
 
   it('lets a dangerous local fire create smoke and eventually consume PV', () => {
@@ -40,14 +40,14 @@ describe('persistent world effects restored from v0.1.9', () => {
     expect(findActiveEffect(state, 'fire', 'bedroom')?.intensity).toBeGreaterThan(60);
     expect(findActiveEffect(state, 'smoke', 'bedroom')).toBeDefined();
     expect(state.player.healthPv).toBeLessThan(100);
-    expect(state.player.needs.stress).toBeGreaterThan(22);
+    expect(state.player.needs.stress).toBeGreaterThan(16);
   });
 
   it('does not apply local physiology from an effect in another location', () => {
     const state = createInitialState();
     addPersistentEffect(state, 'persistent_noise', 'kitchen', 58);
     advanceTime(state, 60);
-    expect(state.player.needs.stress).toBe(22);
+    expect(state.player.needs.stress).toBe(16);
   });
 
   it('surfaces local effects in state-driven narrative', () => {
@@ -68,20 +68,20 @@ describe('persistent world effects restored from v0.1.9', () => {
     expect(codes).toContain('EFFECT_INTENSITY_INVALID');
   });
 
-  it('triggers the unattended kitchen noise at exactly five minutes', () => {
+  it('triggers the unattended kitchen noise at exactly twenty-five minutes', () => {
     const state = createInitialState();
-    advanceTime(state, 299);
+    advanceTime(state, 1499);
     expect(findActiveEffect(state, 'persistent_noise', 'kitchen')).toBeUndefined();
     const result = advanceTime(state, 1);
     const noise = findActiveEffect(state, 'persistent_noise', 'kitchen');
     expect(noise?.intensity).toBe(58);
-    expect(noise?.createdAtSeconds).toBe(300);
+    expect(noise?.createdAtSeconds).toBe(1500);
     expect(result.effects.startedEventIds).toContain('evt_noise');
   });
 
-  it('starts the kitchen water leak at exactly twelve minutes', () => {
+  it('starts the kitchen water leak at exactly fifty-five minutes', () => {
     const state = createInitialState();
-    advanceTime(state, 719);
+    advanceTime(state, 3299);
     expect(state.world.leakActive).toBe(false);
     advanceTime(state, 1);
     expect(state.world.leakActive).toBe(true);
@@ -89,9 +89,9 @@ describe('persistent world effects restored from v0.1.9', () => {
     expect(state.world.eventHistory.at(-1)?.type).toBe('WORLD_WATER_LEAK');
   });
 
-  it('starts the distant garden smoke at exactly twenty-five minutes and does not duplicate events', () => {
+  it('starts the distant garden smoke at exactly ninety minutes and does not duplicate events', () => {
     const state = createInitialState();
-    advanceTime(state, 1500);
+    advanceTime(state, 5400);
     expect(findActiveEffect(state, 'smoke', 'garden')?.intensity).toBe(46);
     expect(state.world.eventHistory).toHaveLength(3);
     advanceTime(state, 600);
