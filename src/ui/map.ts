@@ -129,6 +129,15 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
 }
 
+function encodedTravelTarget(target: { id: string; name: string; lat: number; lng: number }): string {
+  return escapeHtml(encodeURIComponent(JSON.stringify({
+    id: target.id,
+    name: target.name,
+    lat: target.lat,
+    lon: target.lng,
+  })));
+}
+
 function poiIcon(poi: MapPoi): L.DivIcon {
   const category = escapeHtml(poi.category);
   return L.divIcon({
@@ -141,7 +150,8 @@ function poiIcon(poi: MapPoi): L.DivIcon {
 }
 
 function poiPopup(poi: MapPoi): string {
-  return `<div class="map-popup poi-popup"><strong>${escapeHtml(poi.category)}</strong><span>${escapeHtml(poi.name)}</span><small>${escapeHtml(poi.typeLabel)}</small></div>`;
+  const target = encodedTravelTarget(poi);
+  return `<div class="map-popup poi-popup"><strong>${escapeHtml(poi.category)}</strong><span>${escapeHtml(poi.name)}</span><small>${escapeHtml(poi.typeLabel)}</small><button type="button" data-action="TRAVEL_TO_MAP_POI" data-target="${target}">S’y rendre</button></div>`;
 }
 
 export interface MapController {
@@ -269,9 +279,10 @@ export function createMapController(initialState: MapUiState, persist: (state: M
     poiLayer = L.layerGroup().addTo(map);
 
     const homeIcon = L.divIcon({ className: 'absence-home-marker', html: '<span aria-label="Maison">🏠</span>', iconSize: [36, 36], iconAnchor: [18, 18] });
+    const homeTarget = encodedTravelTarget({ id: 'home', name: 'Maison', ...DEFAULT_HOME_COORDINATES });
     L.marker([DEFAULT_HOME_COORDINATES.lat, DEFAULT_HOME_COORDINATES.lng], { icon: homeIcon, zIndexOffset: 1000 })
       .addTo(map)
-      .bindPopup('<div class="map-popup"><strong>Maison</strong><button type="button" data-map-return-home>Revenir à la maison</button></div>');
+      .bindPopup(`<div class="map-popup"><strong>Maison</strong><button type="button" data-action="TRAVEL_TO_MAP_POI" data-target="${homeTarget}">Revenir à la maison</button></div>`);
 
     map.on('movestart zoomstart', startInteraction);
     map.on('moveend zoomend', endInteraction);
