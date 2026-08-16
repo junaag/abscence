@@ -35,4 +35,29 @@ test('nearby OSM POIs load after the map and remain above the fog layer', async 
   await expect(popup).toContainText('Services');
   await expect(popup).toContainText('Station Ingres');
   await expect(popup).toContainText('Station service');
+  await expect(popup.getByRole('button', { name: 'S’y rendre' })).toBeVisible();
+});
+
+test('a map POI becomes a real destination and the home marker becomes a real return trip', async ({ page }) => {
+  await page.getByRole('button', { name: /Aller vers Cuisine/ }).click();
+  await page.getByRole('button', { name: /Aller vers Jardin/ }).click();
+  await page.getByRole('button', { name: /Ouvrir vers Rue devant la maison/ }).click();
+  await page.getByRole('button', { name: /Aller vers Rue devant la maison/ }).click();
+
+  await page.getByRole('button', { name: /Carte/ }).click();
+  const fog = page.getByTestId('map-fog');
+  await expect(page.locator('.leaflet-marker-icon[title="Station Ingres"]')).toBeVisible({ timeout: 6000 });
+  await expect(fog).toHaveAttribute('data-explored-corridors', '2');
+
+  await page.locator('.leaflet-marker-icon[title="Station Ingres"]').click();
+  await page.locator('.leaflet-popup-content').getByRole('button', { name: 'S’y rendre' }).click();
+
+  await expect(page.locator('.place')).toHaveText('Station Ingres');
+  await expect(fog).toHaveAttribute('data-explored-corridors', '3');
+
+  await page.locator('.absence-home-marker').click();
+  await page.locator('.leaflet-popup-content').getByRole('button', { name: 'Revenir à la maison' }).click();
+
+  await expect(page.locator('.place')).toHaveText('Jardin');
+  await expect(fog).toHaveAttribute('data-explored-corridors', '4');
 });
