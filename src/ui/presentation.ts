@@ -8,10 +8,12 @@ import {
   getContextActions,
   getItemActions,
   getMobileNetworkState,
+  getPhoneCapabilities,
   getWeatherState,
   inventoryItems,
   looseItemsAtCurrentLocation,
   phoneCalls,
+  phoneContacts,
   phoneDeviceItemId,
   phoneMessages,
   type ActionOption,
@@ -211,6 +213,24 @@ function phoneHistory(title: string, entries: ReadonlyArray<{ name: string; meta
   `;
 }
 
+function phoneCommunicationActions(state: GameState, kind: 'call' | 'sms'): string {
+  const capabilities = getPhoneCapabilities(state);
+  const allowed = kind === 'call' ? capabilities.canPlaceCall : capabilities.canSendSms;
+  if (!allowed) {
+    return `<div class="phone-note">${kind === 'call' ? 'Appels' : 'SMS'} indisponibles : batterie ou réseau insuffisant.</div>`;
+  }
+
+  const actionId = kind === 'call' ? 'CALL_CONTACT' : 'SEND_SMS_CONTACT';
+  const actions: ActionOption[] = phoneContacts().map((contact) => ({
+    id: actionId,
+    targetId: contact.id,
+    label: kind === 'call' ? `Appeler ${contact.name}` : `Envoyer « Où êtes-vous ? » à ${contact.name}`,
+    detail: kind === 'call' ? 'L’appel consomme du temps et un peu de batterie.' : 'Message court envoyé sur le réseau mobile.',
+  }));
+
+  return `<div class="section-title">Contacter la famille</div>${actions.map(actionButton).join('')}`;
+}
+
 function phoneWeather(state: GameState): string {
   const weather = getWeatherState(state);
   const meta = WEATHER_META[weather.condition];
@@ -246,9 +266,9 @@ export function renderPhoneView(state: GameState, ui: UiState): string {
     meta: `${message.preview} · ${message.displayTime}`,
   }));
   const content = ui.phoneTab === 'calls'
-    ? phoneHistory('Appels récents', calls)
+    ? `${phoneHistory('Appels récents', calls)}${phoneCommunicationActions(state, 'call')}`
     : ui.phoneTab === 'messages'
-      ? phoneHistory('Messages', messages)
+      ? `${phoneHistory('Messages', messages)}${phoneCommunicationActions(state, 'sms')}`
       : ui.phoneTab === 'weather'
         ? phoneWeather(state)
         : phoneHome();
@@ -260,6 +280,7 @@ export function renderPhoneView(state: GameState, ui: UiState): string {
           <span>${formatClock(state)}</span>
           <span>${battery === undefined ? 'Batterie ?' : `Batterie ${battery.toFixed(1).replace('.0', '')} %`} · ${network}</span>
         </div>
+        ${resultCard(ui.result)}
         ${content}
       </section>
     </main>
