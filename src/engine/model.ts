@@ -62,6 +62,7 @@ export interface ConnectionState {
   type: 'door' | 'passage';
   open: boolean;
   locked: boolean;
+  lockCode?: string;
   openSeconds: number;
   travelSeconds: number;
 }
@@ -73,6 +74,7 @@ export interface ContainerState {
   locationId: LocationId;
   open: boolean;
   locked: boolean;
+  lockCode?: string;
   contentIds: ItemId[];
 }
 
@@ -88,6 +90,7 @@ export interface ItemState {
   name: string;
   location: ItemLocation;
   examined: boolean;
+  keyCode?: string;
   liquidMl?: number;
   capacityMl?: number;
   batteryPercent?: number;
@@ -261,6 +264,7 @@ export type ActionId =
   | 'MOVE'
   | 'OPEN_CONNECTION'
   | 'OPEN_CONTAINER'
+  | 'UNLOCK_TARGET'
   | 'TAKE_ITEM'
   | 'EAT_ITEM'
   | 'DRINK_ITEM'
