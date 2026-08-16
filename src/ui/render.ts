@@ -46,7 +46,7 @@ function viewMarkup(state: GameState, ui: UiState): string {
     case 'home': return renderHomeView(state, ui);
     case 'inventory': return renderInventoryView(state, ui);
     case 'phone': return renderPhoneView(state, ui);
-    case 'map': return renderMapView();
+    case 'map': return renderMapView(ui);
   }
 }
 
@@ -91,6 +91,8 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
           mapState,
           persistMapState,
           (encodedTarget) => execute({ id: 'TRAVEL_TO_MAP_POI', targetId: encodedTarget }),
+          (encodedTarget) => execute({ id: 'WALK_TO_MAP_POINT', targetId: encodedTarget }),
+          locationMapCoordinate(state),
         );
         mapController = controller;
         return controller;
@@ -106,6 +108,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
           controller.detach();
           return;
         }
+        controller.sync(mapState, locationMapCoordinate(state));
         const slot = root.querySelector<HTMLElement>('[data-map-slot]');
         if (slot) controller.attach(slot);
       })
@@ -119,7 +122,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
       renderHud(state),
       renderPersistenceWarning(persistenceWarning),
       viewMarkup(state, ui),
-      renderNavigation(ui.view),
+      renderNavigation(ui.view, state),
       renderTargetPopup(state, ui),
       menuOverlay(menuPanel, preferences),
     ].join('');
@@ -133,11 +136,11 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     if (!destination) return;
     const origin = locationMapCoordinate(previousState) ?? { ...DEFAULT_HOME_COORDINATES };
 
-    let nextMapState = addExploredMapArea(mapState, { ...destination, radiusM: 28 });
+    let nextMapState = addExploredMapArea(mapState, { ...destination, radiusM: 16 });
     const moved = Math.abs(origin.lat - destination.lat) > 0.000001 || Math.abs(origin.lng - destination.lng) > 0.000001;
-    if (moved) nextMapState = addExploredMapCorridor(nextMapState, { points: [origin, destination], radiusM: 12 });
+    if (moved) nextMapState = addExploredMapCorridor(nextMapState, { points: [origin, destination], radiusM: 7 });
     persistMapState(nextMapState);
-    mapController?.sync(mapState);
+    mapController?.sync(mapState, destination);
   };
 
   const closePopupContext = (): void => {
@@ -160,7 +163,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     ui.result = transition.result;
     markPersistenceFailure(options.persist(state));
 
-    if (transition.result.success && (action.id === 'MOVE' || action.id === 'TRAVEL_TO_MAP_POI')) {
+    if (transition.result.success && (action.id === 'MOVE' || action.id === 'TRAVEL_TO_MAP_POI' || action.id === 'WALK_TO_MAP_POINT')) {
       revealMovementOnMap(previousState);
     }
 
