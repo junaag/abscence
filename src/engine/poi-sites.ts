@@ -2,7 +2,7 @@ import type { PoiClueState, PoiRiskKind, PoiRiskState, PoiSiteCategory, PoiSiteS
 
 type RiskKey = 'glass' | 'shelf' | 'electric' | 'dark';
 type RiskSpec = readonly [PoiRiskKind, string, string, number, number, number, number];
-type ZoneSpec = readonly [string, string, boolean, readonly string[], readonly string[], RiskKey?, string?];
+type ZoneSpec = readonly [string, string, boolean, readonly string[], readonly string[], (RiskKey | undefined)?, string?];
 type ProfileSpec = readonly [0 | 1 | 2, readonly ZoneSpec[]];
 
 const R: Readonly<Record<RiskKey, RiskSpec>> = Object.freeze({
