@@ -20,6 +20,13 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
+async function reachStreet(page: import('@playwright/test').Page): Promise<void> {
+  await page.getByRole('button', { name: /Aller vers Cuisine/ }).click();
+  await page.getByRole('button', { name: /Aller vers Jardin/ }).click();
+  await page.getByRole('button', { name: /Ouvrir vers Rue devant le domicile/ }).click();
+  await page.getByRole('button', { name: /Aller vers Rue devant le domicile/ }).click();
+}
+
 test('only discovered POIs render and a failed travel explains why instead of looking inactive', async ({ page }) => {
   await page.getByRole('button', { name: /Carte/ }).click();
   await expect(page.getByTestId('map-fog')).toBeVisible();
@@ -45,10 +52,7 @@ test('only discovered POIs render and a failed travel explains why instead of lo
 });
 
 test('the domicile is a normal residential POI and POI travel becomes real once outside', async ({ page }) => {
-  await page.getByRole('button', { name: /Aller vers Cuisine/ }).click();
-  await page.getByRole('button', { name: /Aller vers Jardin/ }).click();
-  await page.getByRole('button', { name: /Ouvrir vers Rue devant le domicile/ }).click();
-  await page.getByRole('button', { name: /Aller vers Rue devant le domicile/ }).click();
+  await reachStreet(page);
 
   await page.getByRole('button', { name: /Carte/ }).click();
   const fog = page.getByTestId('map-fog');
@@ -69,4 +73,31 @@ test('the domicile is a normal residential POI and POI travel becomes real once 
 
   await expect(page.locator('.place')).toHaveText('Jardin');
   await expect(fog).toHaveAttribute('data-explored-corridors', '4');
+});
+
+test('a discovered POI supports observe enter search take resource and leave on mobile', async ({ page }) => {
+  await reachStreet(page);
+  await page.getByRole('button', { name: /Carte/ }).click();
+  await expect(page.locator('.leaflet-marker-icon[title="Station Ingres"]')).toBeVisible({ timeout: 6000 });
+  await page.locator('.leaflet-marker-icon[title="Station Ingres"]').click();
+  await page.locator('.leaflet-popup-content').filter({ hasText: 'Station Ingres' }).getByRole('button', { name: 'S’y rendre' }).click();
+  await expect(page.locator('.place')).toHaveText('Station Ingres');
+
+  await page.locator('nav').getByRole('button', { name: /Accueil/ }).click();
+  await expect(page.getByTestId('home-view')).toContainText('De l’extérieur');
+  await page.getByRole('button', { name: 'Observer les lieux' }).click();
+  await expect(page.getByText('Vous observez les lieux.', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Entrer' }).click();
+  await expect(page.getByTestId('home-view')).toContainText('À l’intérieur de Station Ingres');
+
+  await page.getByRole('button', { name: /Fouiller méthodiquement/ }).click();
+  await expect(page.getByText('Vous fouillez méthodiquement.', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('home-view')).toContainText('Bouteille d’eau');
+  await expect(page.getByTestId('home-view')).toContainText('Lampe torche');
+
+  await page.getByTestId('home-view').getByText('Bouteille d’eau', { exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Prendre' }).click();
+  await page.getByRole('button', { name: '×' }).click();
+  await page.getByRole('button', { name: 'Sortir' }).click();
+  await expect(page.getByTestId('home-view')).toContainText('devant Station Ingres');
 });
