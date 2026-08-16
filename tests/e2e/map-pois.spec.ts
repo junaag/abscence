@@ -10,6 +10,7 @@ test.beforeEach(async ({ page }) => {
           { type: 'node', id: 1, lat: 43.4055, lon: 5.0549, tags: { amenity: 'fuel', name: 'Station Ingres' } },
           { type: 'node', id: 2, lat: 43.4057, lon: 5.0551, tags: { shop: 'car_repair', name: 'Garage du Sud' } },
           { type: 'node', id: 3, lat: 43.4059, lon: 5.0552, tags: { amenity: 'police', name: 'Police municipale' } },
+          { type: 'node', id: 4, lat: 43.4061, lon: 5.0554, tags: { amenity: 'pharmacy', name: 'Pharmacie du quartier' } },
         ],
       }),
     });
@@ -19,23 +20,28 @@ test.beforeEach(async ({ page }) => {
   await page.reload();
 });
 
-test('nearby OSM POIs load after the map and remain above the fog layer', async ({ page }) => {
+test('nearby OSM POIs load with the balanced categories and remain above the fog layer', async ({ page }) => {
   await page.getByRole('button', { name: /Carte/ }).click();
   await expect(page.getByTestId('map-fog')).toBeVisible();
 
-  await expect(page.locator('[data-poi-category="Services"]')).toHaveCount(2, { timeout: 6000 });
+  await expect(page.locator('[data-poi-category="Automobile"]')).toHaveCount(2, { timeout: 6000 });
   await expect(page.locator('[data-poi-category="Services publics"]')).toHaveCount(1);
+  await expect(page.locator('[data-poi-category="Santé"]')).toHaveCount(1);
 
-  const servicePaneZ = await page.locator('.leaflet-poi-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
+  const poiPaneZ = await page.locator('.leaflet-poi-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
   const fogPaneZ = await page.locator('.leaflet-fog-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
-  expect(servicePaneZ).toBeGreaterThan(fogPaneZ);
+  expect(poiPaneZ).toBeGreaterThan(fogPaneZ);
 
   await page.locator('.leaflet-marker-icon[title="Station Ingres"]').click();
   const popup = page.locator('.leaflet-popup-content');
-  await expect(popup).toContainText('Services');
+  await expect(popup).toContainText('Automobile');
   await expect(popup).toContainText('Station Ingres');
   await expect(popup).toContainText('Station service');
   await expect(popup.getByRole('button', { name: 'S’y rendre' })).toBeVisible();
+
+  await page.locator('.leaflet-marker-icon[title="Pharmacie du quartier"]').click();
+  await expect(page.locator('.leaflet-popup-content')).toContainText('Santé');
+  await expect(page.locator('.leaflet-popup-content')).toContainText('Pharmacie');
 });
 
 test('a map POI becomes a real destination and the home marker becomes a real return trip', async ({ page }) => {
