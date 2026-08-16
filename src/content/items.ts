@@ -39,7 +39,7 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   }),
   water_bottle: Object.freeze({
     id: 'water_bottle', name: 'Bouteille d’eau', carryCost: 0.8,
-    inspection: Object.freeze({ role: 'Un contenant transportable.', operation: 'Peut être bu ou rempli.' }),
+    inspection: Object.freeze({ role: 'Un contenant transportable.', operation: 'Peut être bue et remplie à une source d’eau.' }),
   }),
   towel: Object.freeze({ id: 'towel', name: 'Torchon', carryCost: 0.2, inspection: Object.freeze({ role: 'Un textile absorbant.', operation: 'Permet d’éponger.' }) }),
   key: Object.freeze({ id: 'key', name: 'Petite clé', carryCost: 0.05, inspection: Object.freeze({ role: 'Une clé dont la serrure reste inconnue.' }) }),
