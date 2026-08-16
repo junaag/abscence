@@ -75,7 +75,7 @@ test('the domicile is a normal residential POI and POI travel becomes real once 
   await expect(fog).toHaveAttribute('data-explored-corridors', '4');
 });
 
-test('a discovered POI supports observe enter search take resource and leave on mobile', async ({ page }) => {
+test('a station service exposes structured Automobile zones, risks and specific loot on mobile', async ({ page }) => {
   await reachStreet(page);
   await page.getByRole('button', { name: /Carte/ }).click();
   await expect(page.locator('.leaflet-marker-icon[title="Station Ingres"]')).toBeVisible({ timeout: 6000 });
@@ -88,16 +88,28 @@ test('a discovered POI supports observe enter search take resource and leave on 
   await page.getByRole('button', { name: 'Observer les lieux' }).click();
   await expect(page.getByText('Vous observez les lieux.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Entrer' }).click();
-  await expect(page.getByTestId('home-view')).toContainText('À l’intérieur de Station Ingres');
 
-  await page.getByRole('button', { name: /Fouiller méthodiquement/ }).click();
-  await expect(page.getByText('Vous fouillez méthodiquement.', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('home-view')).toContainText('boutique / accueil');
   await expect(page.getByTestId('home-view')).toContainText('Bouteille d’eau');
+  await expect(page.getByRole('button', { name: /Sécuriser la zone/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Forcer l’accès vers réserve/ })).toBeVisible();
+
+  await page.getByRole('button', { name: /Fouiller boutique \/ accueil méthodiquement/ }).click();
+  await expect(page.getByText('Vous fouillez boutique / accueil méthodiquement.', { exact: true })).toBeVisible();
   await expect(page.getByTestId('home-view')).toContainText('Lampe torche');
+  await expect(page.getByTestId('home-view')).toContainText('Boîte de conserve');
+  await expect(page.getByTestId('home-view')).toContainText('Indice :');
 
   await page.getByTestId('home-view').getByText('Bouteille d’eau', { exact: true }).click();
   await page.getByRole('dialog').getByRole('button', { name: 'Prendre' }).click();
   await page.getByRole('button', { name: '×' }).click();
+
+  await page.getByRole('button', { name: /Forcer l’accès vers réserve/ }).click();
+  await expect(page.getByTestId('home-view')).toContainText('réserve');
+  await page.getByRole('button', { name: /Fouiller réserve méthodiquement/ }).click();
+  await expect(page.getByTestId('home-view')).toContainText('Caisse à outils');
+  await expect(page.getByTestId('home-view')).toContainText('Pied-de-biche');
+
   await page.getByRole('button', { name: 'Sortir' }).click();
   await expect(page.getByTestId('home-view')).toContainText('devant Station Ingres');
 });
