@@ -30,6 +30,21 @@ export function getContextActions(state: GameState): ActionOption[] {
     else actions.push({ id: 'OPEN_CONNECTION', targetId: connection.id, label: `Ouvrir vers ${location.name}`, detail: `${connection.openSeconds} s` });
   }
 
+  const currentLocation = state.locations[state.player.locationId];
+  const site = currentLocation?.poiSite;
+  if (site) {
+    if (site.phase === 'outside') {
+      if (!site.observed) {
+        actions.push({ id: 'OBSERVE_LOCATION', label: 'Observer les lieux', detail: 'Examiner les abords et les accès visibles.' });
+      } else {
+        actions.push({ id: 'ENTER_POI', label: 'Entrer', detail: 'Franchir l’accès et explorer l’intérieur.' });
+      }
+    } else {
+      if (!site.searched) actions.push({ id: 'SEARCH_LOCATION', label: 'Fouiller méthodiquement', detail: 'Inspecter les zones accessibles. · 3 min' });
+      actions.push({ id: 'LEAVE_POI', label: 'Sortir', detail: 'Revenir à l’extérieur.' });
+    }
+  }
+
   if (hasRunningTap(state)) actions.push({ id: 'DRINK_TAP', label: 'Boire au robinet', detail: 'Boire directement à la source.' });
 
   const carried = inventoryItems(state);
