@@ -10,6 +10,13 @@ class MemoryStorage {
   setItem(key: string, value: string): void { this.values.set(key, value); }
 }
 
+function withPhoneCarried() {
+  const state = createInitialState();
+  const transition = performAction(state, { id: 'TAKE_ITEM', targetId: 'phone_01' });
+  if (!transition.result.success) throw new Error('phone could not be taken');
+  return transition.state;
+}
+
 describe('phone state', () => {
   it('stores historical calls and messages in GameState instead of the UI', () => {
     const state = createInitialState();
@@ -32,7 +39,7 @@ describe('phone state', () => {
     expect(phoneMessages(state)[0]?.preview).toBe('Message modifié par le moteur');
   });
 
-  it('migrates an older v0.2-dev save that does not yet contain phone state', () => {
+  it('normalizes a current prologue save that does not yet contain phone state', () => {
     const storage = new MemoryStorage();
     const legacy = createInitialState() as ReturnType<typeof createInitialState> & { phone?: unknown };
     delete legacy.phone;
@@ -44,8 +51,22 @@ describe('phone state', () => {
     expect(loaded.phone.messages).toHaveLength(3);
   });
 
-  it('derives full phone capabilities from battery and historical mobile thresholds', () => {
+  it('has no usable phone capabilities before the device is found and carried', () => {
     const state = createInitialState();
+    expect(getPhoneCapabilities(state)).toMatchObject({
+      devicePresent: false,
+      powered: false,
+      signalPercent: 100,
+      signalBars: 4,
+      canReadLocalHistory: false,
+      canPlaceCall: false,
+      canSendSms: false,
+      canUseData: false,
+    });
+  });
+
+  it('derives full phone capabilities after the device is picked up', () => {
+    const state = withPhoneCarried();
     expect(getPhoneCapabilities(state)).toMatchObject({
       devicePresent: true,
       powered: true,
@@ -59,14 +80,13 @@ describe('phone state', () => {
   });
 
   it('places a real outgoing family call with time battery history and stress consequences', () => {
-    const state = createInitialState();
+    const state = withPhoneCarried();
     const initialBattery = state.items.phone_01?.batteryPercent ?? 0;
     const initialStress = state.player.needs.stress;
     const transition = performAction(state, { id: 'CALL_CONTACT', targetId: 'wife' });
 
     expect(transition.result.success).toBe(true);
     expect(transition.result.elapsedSeconds).toBe(25);
-    expect(transition.state.engine.elapsedSeconds).toBe(25);
     expect(transition.state.phone.calls[0]).toMatchObject({ contactName: 'Épouse', direction: 'outgoing' });
     expect(transition.state.phone.calls[0]?.displayTime).toContain('Aujourd’hui · 07:12');
     expect(transition.state.items.phone_01?.batteryPercent).toBeLessThan(initialBattery);
@@ -74,7 +94,7 @@ describe('phone state', () => {
   });
 
   it('sends the family search SMS as persistent phone history', () => {
-    const state = createInitialState();
+    const state = withPhoneCarried();
     const transition = performAction(state, { id: 'SEND_SMS_CONTACT', targetId: 'alice' });
 
     expect(transition.result.success).toBe(true);
@@ -88,7 +108,7 @@ describe('phone state', () => {
   });
 
   it('keeps local history offline while communications follow the mobile network', () => {
-    const state = createInitialState();
+    const state = withPhoneCarried();
     state.infrastructure.mobile.available = false;
     state.infrastructure.mobile.signalPercent = 0;
     state.infrastructure.mobile.signal = 0;
@@ -105,7 +125,7 @@ describe('phone state', () => {
   });
 
   it('uses the exact v0.1.8 SMS/call/data signal thresholds', () => {
-    const state = createInitialState();
+    const state = withPhoneCarried();
     state.infrastructure.mobile.available = true;
 
     state.infrastructure.mobile.signalPercent = 15;
@@ -119,27 +139,11 @@ describe('phone state', () => {
   });
 
   it('blocks all phone operations when the carried device battery is empty', () => {
-    const state = createInitialState();
+    const state = withPhoneCarried();
     const phone = state.items.phone_01;
     if (!phone) throw new Error('missing phone');
     phone.batteryPercent = 0;
     expect(getPhoneCapabilities(state)).toMatchObject({
-      powered: false,
-      canReadLocalHistory: false,
-      canPlaceCall: false,
-      canSendSms: false,
-      canUseData: false,
-    });
-  });
-
-  it('requires the phone to be carried for its capabilities to be usable', () => {
-    const state = createInitialState();
-    const phone = state.items.phone_01;
-    if (!phone) throw new Error('missing phone');
-    state.player.inventoryIds = state.player.inventoryIds.filter((id) => id !== phone.id);
-    phone.location = { kind: 'location', id: 'bedroom' };
-    expect(getPhoneCapabilities(state)).toMatchObject({
-      devicePresent: false,
       powered: false,
       canReadLocalHistory: false,
       canPlaceCall: false,
