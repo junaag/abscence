@@ -39,13 +39,13 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   }),
   water_bottle: Object.freeze({
     id: 'water_bottle', name: 'Bouteille d’eau', carryCost: 0.8,
-    inspection: Object.freeze({ role: 'Une bouteille transportable.', operation: 'Peut être bue ou remplie.' }),
+    inspection: Object.freeze({ role: 'Un contenant transportable.', operation: 'Peut être bu ou rempli.' }),
   }),
   towel: Object.freeze({ id: 'towel', name: 'Torchon', carryCost: 0.2, inspection: Object.freeze({ role: 'Un textile absorbant.', operation: 'Permet d’éponger.' }) }),
   key: Object.freeze({ id: 'key', name: 'Petite clé', carryCost: 0.05, inspection: Object.freeze({ role: 'Une clé dont la serrure reste inconnue.' }) }),
   smartphone: Object.freeze({
     id: 'smartphone', name: 'Téléphone', carryCost: 0.4,
-    inspection: Object.freeze({ role: 'Un smartphone utilisable.', operation: 'Batterie et réseau conditionnent ses fonctions.' }),
+    inspection: Object.freeze({ role: 'Un smartphone utilisable.', operation: 'Il fonctionne sur batterie ; le réseau conditionne ses fonctions.' }),
     battery: Object.freeze({ initialChargePct: 78, useCostPct: 0.03, rechargeable: true, chargeRatePctPerMinute: 2 }),
     usable: Object.freeze({ durationSeconds: 3, uiIntent: 'OPEN_PHONE' }),
   }),
