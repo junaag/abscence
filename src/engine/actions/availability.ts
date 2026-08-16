@@ -1,4 +1,5 @@
 import { getItemDefinition } from '../../content/items';
+import { getEncumbranceProfile, scalePhysicalDuration } from '../encumbrance';
 import { activeEffectsAt } from '../effects';
 import type { ActionOption, GameState, ItemState } from '../model';
 import { WATER_RULES } from '../rules';
@@ -22,12 +23,23 @@ function localPowerSources(state: GameState): ItemState[] {
   return looseItemsAtCurrentLocation(state).filter((item) => getItemDefinition(item.definitionId)?.powerSource !== undefined);
 }
 
+function durationLabel(seconds: number): string {
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.round(seconds / 60);
+  return `${minutes} min`;
+}
+
 export function getContextActions(state: GameState): ActionOption[] {
   const actions: ActionOption[] = [];
   for (const { connection, location } of connectedDestinations(state)) {
     if (connection.locked) continue;
-    if (connection.open) actions.push({ id: 'MOVE', targetId: location.id, label: `Aller vers ${location.name}`, detail: `${connection.travelSeconds} s` });
-    else actions.push({ id: 'OPEN_CONNECTION', targetId: connection.id, label: `Ouvrir vers ${location.name}`, detail: `${connection.openSeconds} s` });
+    if (connection.open) {
+      const seconds = scalePhysicalDuration(state, connection.travelSeconds, 'movement');
+      actions.push({ id: 'MOVE', targetId: location.id, label: `Aller vers ${location.name}`, detail: durationLabel(seconds) });
+    } else {
+      const seconds = scalePhysicalDuration(state, connection.openSeconds, 'action');
+      actions.push({ id: 'OPEN_CONNECTION', targetId: connection.id, label: `Ouvrir vers ${location.name}`, detail: durationLabel(seconds) });
+    }
   }
 
   const currentLocation = state.locations[state.player.locationId];
@@ -35,13 +47,18 @@ export function getContextActions(state: GameState): ActionOption[] {
   if (site) {
     if (site.phase === 'outside') {
       if (!site.observed) {
-        actions.push({ id: 'OBSERVE_LOCATION', label: 'Observer les lieux', detail: 'Examiner les abords et les accès visibles.' });
+        actions.push({ id: 'OBSERVE_LOCATION', label: 'Observer les lieux', detail: 'Examiner les abords et les accès visibles. · 25 s' });
       } else {
-        actions.push({ id: 'ENTER_POI', label: 'Entrer', detail: 'Franchir l’accès et explorer l’intérieur.' });
+        const seconds = scalePhysicalDuration(state, 12, 'action');
+        actions.push({ id: 'ENTER_POI', label: 'Entrer', detail: `Découvrir ce qui est immédiatement visible. · ${durationLabel(seconds)}` });
       }
     } else {
-      if (!site.searched) actions.push({ id: 'SEARCH_LOCATION', label: 'Fouiller méthodiquement', detail: 'Inspecter les zones accessibles. · 3 min' });
-      actions.push({ id: 'LEAVE_POI', label: 'Sortir', detail: 'Revenir à l’extérieur.' });
+      if (!site.searched) {
+        const seconds = scalePhysicalDuration(state, 12 * 60, 'action');
+        actions.push({ id: 'SEARCH_LOCATION', label: 'Fouiller méthodiquement', detail: `Inspecter en profondeur les zones accessibles. · ${durationLabel(seconds)}` });
+      }
+      const leaveSeconds = scalePhysicalDuration(state, 8, 'action');
+      actions.push({ id: 'LEAVE_POI', label: 'Sortir', detail: `Revenir à l’extérieur. · ${durationLabel(leaveSeconds)}` });
     }
   }
 
@@ -132,3 +149,5 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
 
   return actions;
 }
+
+void getEncumbranceProfile;
