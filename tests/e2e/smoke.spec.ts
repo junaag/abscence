@@ -29,6 +29,15 @@ test('closing a container popup naturally closes the container', async ({ page }
   await expect(page.getByRole('button', { name: /Réfrigérateur.*Fermé/ })).toBeVisible();
 });
 
+test('an obvious food can be eaten directly from its contextual popup', async ({ page }) => {
+  await page.getByRole('button', { name: /Aller vers Cuisine/ }).click();
+  await page.locator('[data-open-item="apple_01"]').click();
+  await expect(page.getByRole('button', { name: /^Manger/ })).toBeVisible();
+  await page.getByRole('button', { name: /^Manger/ }).click();
+  await expect(page.getByText('Vous mangez la pomme.', { exact: true })).toBeVisible();
+  await expect(page.locator('[data-open-item="apple_01"]')).toHaveCount(0);
+});
+
 test('using the phone from its object popup opens the phone interface', async ({ page }) => {
   await page.getByRole('button', { name: /Inventaire/ }).click();
   await page.locator('[data-open-item="phone_01"]').click();
@@ -52,6 +61,15 @@ test('phone restores local calls and messages with engine battery and network st
   await expect(page.getByText('Dernier appel hier · 22:41')).toBeVisible();
   await expect(page.getByText('Hier · 18:12')).toBeVisible();
   await expect(page.getByText('Hier · 18:09')).toBeVisible();
+});
+
+test('phone can attempt a real family call and persists the consequence', async ({ page }) => {
+  await page.getByRole('button', { name: /Téléphone/ }).click();
+  await page.getByRole('button', { name: 'Appels' }).click();
+  await page.getByRole('button', { name: /^Appeler Épouse/ }).click();
+  await expect(page.getByText('Aucune réponse de Épouse', { exact: true })).toBeVisible();
+  await expect(page.getByText(/Aujourd’hui · 07:12/)).toBeVisible();
+  await expect(page.getByTestId('phone-status')).not.toContainText('Batterie 78 %');
 });
 
 test('phone weather reads the persisted simulated world state', async ({ page }) => {
