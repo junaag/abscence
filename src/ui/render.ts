@@ -156,7 +156,13 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     ui.result = transition.result;
     markPersistenceFailure(options.persist(state));
 
-    if (transition.result.success && action.id === 'MOVE') revealMovementOnMap(previousState);
+    if (transition.result.success && (action.id === 'MOVE' || action.id === 'TRAVEL_TO_MAP_POI')) {
+      revealMovementOnMap(previousState);
+    }
+
+    if (transition.result.success && action.targetId && state.items[action.targetId]?.location.kind === 'consumed') {
+      closePopupContext();
+    }
 
     if (transition.result.success && action.id === 'USE_ITEM' && action.targetId === phoneDeviceItemId(state)) {
       ui.view = 'phone';
@@ -177,13 +183,6 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
       closePopupContext();
       ui = { view: navId, phoneTab: ui.phoneTab, popupTarget: undefined, result: ui.result };
       menuPanel = null;
-      render();
-      return;
-    }
-
-    if (button.dataset.mapReturnHome !== undefined) {
-      closePopupContext();
-      ui = { view: 'home', phoneTab: ui.phoneTab, popupTarget: undefined, result: ui.result };
       render();
       return;
     }
