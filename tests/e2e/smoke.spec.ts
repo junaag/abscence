@@ -65,6 +65,7 @@ test('backpack is found in the world and increases carry capacity only when equi
   await page.getByRole('button', { name: /Aller vers Cuisine/ }).click();
   await page.locator('[data-open-item="backpack_01"]').click();
   await page.getByRole('dialog').getByRole('button', { name: 'Prendre' }).click();
+  await page.getByRole('button', { name: '×' }).click();
   await page.getByRole('button', { name: /Inventaire/ }).click();
   await expect(page.getByTestId('carry-capacity')).toContainText('/ 4');
   await page.locator('[data-open-item="backpack_01"]').click();
