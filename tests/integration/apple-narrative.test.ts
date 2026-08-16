@@ -4,6 +4,15 @@ import { createInitialState } from '../../src/engine/state';
 import { describeCurrentLocation, describeImmediateConcern } from '../../src/narrative/location';
 
 describe('state-driven narrative', () => {
+  it('opens on amnesia and the flash without inventing known family context', () => {
+    const state = createInitialState();
+    const text = describeCurrentLocation(state).toLowerCase();
+    expect(text).toContain('flash');
+    expect(text).toContain('aucun nom');
+    expect(text).not.toContain('épouse');
+    expect(text).not.toContain('fille');
+  });
+
   it('stops mentioning the apple after it is eaten directly where it lies', () => {
     let state=createInitialState();
     state=performAction(state,{id:'MOVE',targetId:'kitchen'}).state;
@@ -12,22 +21,22 @@ describe('state-driven narrative', () => {
     expect(describeCurrentLocation(state).toLowerCase()).not.toContain('pomme');
   });
 
-  it('moves the early concern from calling out to phone contact to exterior verification', () => {
+  it('does not prescribe a next action in the situation narrative', () => {
+    const state=createInitialState();
+    expect(describeImmediateConcern(state)).toBe('');
+    const text=describeCurrentLocation(state).toLowerCase();
+    expect(text).not.toContain('vous devriez');
+    expect(text).not.toContain('prochaine vérification');
+    expect(text).not.toContain('naturel serait');
+  });
+
+  it('uses a shorter description when returning to a known place', () => {
     let state=createInitialState();
-    expect(describeImmediateConcern(state)).toContain('appelé personne à haute voix');
-
-    state=performAction(state,{id:'SHOUT_FOR_WIFE'}).state;
-    expect(describeImmediateConcern(state)).toContain('téléphone fonctionne encore');
-
-    state=performAction(state,{id:'CALL_CONTACT',targetId:'wife'}).state;
-    expect(describeImmediateConcern(state)).toContain('regarder dehors depuis le jardin');
-
+    const firstBedroom=describeCurrentLocation(state);
     state=performAction(state,{id:'MOVE',targetId:'kitchen'}).state;
-    state=performAction(state,{id:'MOVE',targetId:'garden'}).state;
-    expect(describeImmediateConcern(state)).toContain('prochaine vérification naturelle est la rue');
-
-    state=performAction(state,{id:'OPEN_CONNECTION',targetId:'garden_street'}).state;
-    state=performAction(state,{id:'MOVE',targetId:'street'}).state;
-    expect(describeImmediateConcern(state)).toContain('La rue confirme');
+    state=performAction(state,{id:'MOVE',targetId:'bedroom'}).state;
+    const revisit=describeCurrentLocation(state);
+    expect(revisit.length).toBeLessThan(firstBedroom.length);
+    expect(revisit).toContain('retrouvez la chambre');
   });
 });
