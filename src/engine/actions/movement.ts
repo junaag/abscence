@@ -1,6 +1,6 @@
 import type { EngineTransition, GameState } from '../model';
 import { connectedDestinations } from '../selectors';
-import { cloneState } from '../state';
+import { cloneState, recordLocationVisit } from '../state';
 import { advanceTime } from '../time';
 import { failure, success } from './result';
 
@@ -13,7 +13,7 @@ export function move(state: GameState, targetId: string | undefined): EngineTran
 
   const next = cloneState(state);
   next.player.locationId = targetId;
-  if (!next.memory.visitedLocationIds.includes(targetId)) next.memory.visitedLocationIds.push(targetId);
+  recordLocationVisit(next, targetId);
   advanceTime(next, candidate.connection.travelSeconds);
   return success(next, next.locations[targetId]?.name ?? 'Déplacement', 'Vous rejoignez le lieu.', candidate.connection.travelSeconds);
 }
