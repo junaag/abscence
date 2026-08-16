@@ -159,6 +159,69 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
     }),
     usable: Object.freeze({ durationSeconds: 1, toggleEnabled: true }),
   }),
+  bandage_pack: Object.freeze({
+    id: 'bandage_pack',
+    name: 'Paquet de bandages',
+    carryCost: 0.25,
+    inspection: Object.freeze({
+      role: 'Des bandages propres encore emballés, utiles pour traiter une blessure légère.',
+      operation: 'Le système de soins détaillé sera nécessaire pour exploiter correctement ce matériel.',
+    }),
+  }),
+  first_aid_kit: Object.freeze({
+    id: 'first_aid_kit',
+    name: 'Trousse de premiers secours',
+    carryCost: 1.1,
+    inspection: Object.freeze({
+      role: 'Une trousse contenant plusieurs fournitures médicales de base.',
+      operation: 'Son contenu prendra toute son importance lorsque les soins et blessures seront plus détaillés.',
+    }),
+  }),
+  crowbar: Object.freeze({
+    id: 'crowbar',
+    name: 'Pied-de-biche',
+    carryCost: 1.4,
+    inspection: Object.freeze({
+      role: 'Un levier métallique robuste, lourd mais très utile pour des accès récalcitrants.',
+      operation: 'Il réduit fortement le temps et le risque lorsqu’un accès doit être forcé.',
+    }),
+  }),
+  tool_kit: Object.freeze({
+    id: 'tool_kit',
+    name: 'Caisse à outils',
+    carryCost: 2,
+    inspection: Object.freeze({
+      role: 'Un assortiment d’outils mécaniques et de bricolage dans une caisse compacte.',
+      operation: 'L’ensemble est lourd mais pourra servir à de nombreuses réparations et manipulations.',
+    }),
+  }),
+  empty_fuel_can: Object.freeze({
+    id: 'empty_fuel_can',
+    name: 'Jerrican vide',
+    carryCost: 1,
+    inspection: Object.freeze({
+      role: 'Un jerrican homologué pour transporter du carburant.',
+      operation: 'Il est vide pour l’instant ; il deviendra utile lorsque le stockage de carburant sera exploitable.',
+    }),
+  }),
+  canned_food: Object.freeze({
+    id: 'canned_food',
+    name: 'Boîte de conserve',
+    carryCost: 0.65,
+    inspection: Object.freeze({
+      role: 'Une conserve alimentaire intacte, beaucoup plus durable qu’un produit frais.',
+      operation: 'Elle devra être ouverte avant consommation ; cette interaction sera détaillée avec la cuisine et les outils.',
+    }),
+  }),
+  work_gloves: Object.freeze({
+    id: 'work_gloves',
+    name: 'Gants de travail',
+    carryCost: 0.15,
+    inspection: Object.freeze({
+      role: 'Des gants épais destinés à protéger les mains lors de manipulations salissantes ou coupantes.',
+      operation: 'Ils pourront réduire certains risques lorsque l’équipement de protection sera détaillé.',
+    }),
+  }),
   wall_outlet: Object.freeze({
     id: 'wall_outlet',
     name: 'Prise électrique',
