@@ -1,6 +1,7 @@
 import { assertValidState } from '../invariants';
 import type { ActionId, EngineTransition, GameAction, GameState } from '../model';
 import { openContainer } from './containers';
+import { travelToMapPoi } from './exploration';
 import { chargeItem, drinkItem, eatItem, examineItem, fillLiquidContainer, takeItem, useItem } from './items';
 import { move, openConnection } from './movement';
 import { callContact, sendSmsContact } from './phone';
@@ -14,6 +15,7 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
   const id: ActionId = action.id;
   switch (id) {
     case 'MOVE': return move(state, action.targetId);
+    case 'TRAVEL_TO_MAP_POI': return travelToMapPoi(state, action.targetId);
     case 'OPEN_CONNECTION': return openConnection(state, action.targetId);
     case 'OPEN_CONTAINER': return openContainer(state, action.targetId);
     case 'TAKE_ITEM': return takeItem(state, action.targetId);
