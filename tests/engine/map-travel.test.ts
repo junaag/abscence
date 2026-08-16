@@ -38,11 +38,11 @@ describe('map travel', () => {
     const location = transition.state.locations[transition.state.player.locationId];
     expect(location?.name).toBe('Station Ingres');
     expect(location?.position).toEqual({ lat: 43.4055, lon: 5.0549 });
-    expect(location?.poiSite).toEqual({ sourceId: 'node:1', phase: 'outside', observed: false, searched: false });
+    expect(location?.poiSite).toEqual({ sourceId: 'node:1', phase: 'outside', observed: false, surfaceRevealed: false, searched: false });
     expect(transition.state.memory.visitedLocationIds).toContain(location?.id);
   });
 
-  it('exposes observe then enter then search then leave without quest guidance', () => {
+  it('reveals only obvious objects on entry, then substantially more during a long methodical search', () => {
     let state = reachPoi();
     expect(getContextActions(state).map((action) => action.id)).toContain('OBSERVE_LOCATION');
     expect(getContextActions(state).map((action) => action.id)).not.toContain('SEARCH_LOCATION');
@@ -53,24 +53,27 @@ describe('map travel', () => {
 
     state = performAction(state, { id: 'ENTER_POI' }).state;
     expect(state.locations[state.player.locationId]?.poiSite?.phase).toBe('inside');
+    expect(state.locations[state.player.locationId]?.poiSite?.surfaceRevealed).toBe(true);
+    const visibleOnEntry = Object.values(state.items).filter((item) => item.location.kind === 'location' && item.location.id === state.player.locationId);
+    expect(visibleOnEntry).toHaveLength(1);
     expect(getContextActions(state).map((action) => action.id)).toContain('SEARCH_LOCATION');
     expect(getContextActions(state).map((action) => action.id)).toContain('LEAVE_POI');
 
     const beforeSearch = state.engine.elapsedSeconds;
     const search = performAction(state, { id: 'SEARCH_LOCATION' });
     expect(search.result.success).toBe(true);
-    expect(search.result.elapsedSeconds).toBe(180);
-    expect(search.state.engine.elapsedSeconds).toBe(beforeSearch + 180);
+    expect(search.result.elapsedSeconds).toBe(12 * 60);
+    expect(search.state.engine.elapsedSeconds).toBe(beforeSearch + 12 * 60);
     expect(search.state.locations[search.state.player.locationId]?.poiSite?.searched).toBe(true);
-    const foundItems = Object.values(search.state.items).filter((item) => item.location.kind === 'location' && item.location.id === search.state.player.locationId);
-    expect(foundItems).toHaveLength(2);
-    expect(search.result.body).toContain(foundItems[0]?.name.toLowerCase() ?? '');
+    const allFoundItems = Object.values(search.state.items).filter((item) => item.location.kind === 'location' && item.location.id === search.state.player.locationId);
+    expect(allFoundItems).toHaveLength(4);
+    expect(search.result.body).toContain('en plus');
 
     state = performAction(search.state, { id: 'LEAVE_POI' }).state;
     expect(state.locations[state.player.locationId]?.poiSite?.phase).toBe('outside');
   });
 
-  it('does not allow repeated searches to duplicate resources', () => {
+  it('does not allow repeated searches or re-entry to duplicate resources', () => {
     let state = reachPoi();
     state = performAction(state, { id: 'OBSERVE_LOCATION' }).state;
     state = performAction(state, { id: 'ENTER_POI' }).state;
@@ -81,6 +84,10 @@ describe('map travel', () => {
     expect(retry.state).toBe(state);
     expect(Object.keys(retry.state.items)).toHaveLength(itemCount);
     expect(retry.result.title).toBe('Déjà fouillé');
+
+    state = performAction(state, { id: 'LEAVE_POI' }).state;
+    state = performAction(state, { id: 'ENTER_POI' }).state;
+    expect(Object.keys(state.items)).toHaveLength(itemCount);
   });
 
   it('requires leaving an interior before using map travel again', () => {
