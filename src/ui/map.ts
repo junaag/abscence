@@ -120,7 +120,8 @@ class FogCanvasLayer extends L.Layer {
 const POI_SYMBOLS: Record<MapPoiCategory, string> = {
   Industrie: '▦',
   Commerce: '●',
-  Services: '◆',
+  Santé: '✚',
+  Automobile: '◆',
   'Services publics': '+',
   Résidentiel: '⌂',
 };
