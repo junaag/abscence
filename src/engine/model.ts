@@ -79,6 +79,8 @@ export interface PoiZoneState {
   discovered: boolean;
   surfaceRevealed: boolean;
   searched: boolean;
+  surfaceLootIds?: string[];
+  deepLootIds?: string[];
   risk?: PoiRiskState;
   clue?: PoiClueState;
 }
