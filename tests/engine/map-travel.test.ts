@@ -38,7 +38,15 @@ describe('map travel', () => {
     const location = transition.state.locations[transition.state.player.locationId];
     expect(location?.name).toBe('Station Ingres');
     expect(location?.position).toEqual({ lat: 43.4055, lon: 5.0549 });
-    expect(location?.poiSite).toEqual({ sourceId: 'node:1', phase: 'outside', observed: false, surfaceRevealed: false, searched: false });
+    expect(location?.poiSite).toMatchObject({
+      sourceId: 'node:1',
+      category: 'Inconnu',
+      phase: 'outside',
+      observed: false,
+      surfaceRevealed: false,
+      searched: false,
+    });
+    expect(location?.poiSite?.zones?.length).toBeGreaterThan(1);
     expect(transition.state.memory.visitedLocationIds).toContain(location?.id);
   });
 
@@ -67,7 +75,8 @@ describe('map travel', () => {
     expect(search.state.locations[search.state.player.locationId]?.poiSite?.searched).toBe(true);
     const allFoundItems = Object.values(search.state.items).filter((item) => item.location.kind === 'location' && item.location.id === search.state.player.locationId);
     expect(allFoundItems).toHaveLength(4);
-    expect(search.result.body).toContain('en plus');
+    expect(search.result.body).toContain('12 minutes');
+    expect(search.result.body).toContain('vous découvrez');
 
     state = performAction(search.state, { id: 'LEAVE_POI' }).state;
     expect(state.locations[state.player.locationId]?.poiSite?.phase).toBe('outside');
@@ -83,7 +92,7 @@ describe('map travel', () => {
     expect(retry.result.success).toBe(false);
     expect(retry.state).toBe(state);
     expect(Object.keys(retry.state.items)).toHaveLength(itemCount);
-    expect(retry.result.title).toBe('Déjà fouillé');
+    expect(retry.result.title).toBe('Zone déjà fouillée');
 
     state = performAction(state, { id: 'LEAVE_POI' }).state;
     state = performAction(state, { id: 'ENTER_POI' }).state;
