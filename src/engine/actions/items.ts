@@ -3,23 +3,67 @@ import { describeItemExamination } from '../examination';
 import { applyDueInfrastructureTransitions, isElectricityAvailable, secondsUntilNextInfrastructureTransition } from '../infrastructure';
 import type { EngineTransition, GameState } from '../model';
 import { FOOD_RULES, WATER_RULES } from '../rules';
-import { hasRunningTap, isItemAccessible } from '../selectors';
+import { canCarryItem, getCarryCapacity, getCarryLoad, hasRunningTap, isItemAccessible, isItemEquipped } from '../selectors';
 import { cloneState, clampNeeds } from '../state';
 import { advanceTime } from '../time';
 import { failure, success } from './result';
+
+function capacityText(state: GameState): string {
+  return `${getCarryLoad(state).toFixed(1).replace('.0', '')} / ${getCarryCapacity(state).toFixed(1).replace('.0', '')}`;
+}
 
 export function takeItem(state: GameState, itemId: string | undefined): EngineTransition {
   if (!itemId || !isItemAccessible(state, itemId)) return failure(state, 'Impossible', 'Cet objet n’est pas accessible.');
   const item = state.items[itemId];
   if (!item || item.location.kind === 'inventory') return failure(state, 'Impossible', 'Cet objet est déjà dans votre inventaire.');
   if (getItemDefinition(item.definitionId)?.portable === false) return failure(state, 'Objet fixe', 'Cet objet fait partie du lieu et ne peut pas être emporté.');
+  if (!canCarryItem(state, itemId)) return failure(state, 'Pas assez de place', `Votre capacité de transport est insuffisante (${capacityText(state)}).`);
   const next = cloneState(state); const nextItem = next.items[itemId];
   if (!nextItem) return failure(state, 'Impossible', 'Cet objet a disparu.');
   if (nextItem.location.kind === 'container') { const source = next.containers[nextItem.location.id]; if (source) source.contentIds = source.contentIds.filter((id) => id !== itemId); }
   nextItem.location = { kind: 'inventory' };
   if (!next.player.inventoryIds.includes(itemId)) next.player.inventoryIds.push(itemId);
   advanceTime(next, 3);
-  return success(next, `Vous prenez ${item.name.toLowerCase()}.`, 'L’objet rejoint votre inventaire.', 3);
+  return success(next, `Vous prenez ${item.name.toLowerCase()}.`, `Charge transportée : ${capacityText(next)}.`, 3);
+}
+
+export function equipItem(state: GameState, itemId: string | undefined): EngineTransition {
+  if (!itemId) return failure(state, 'Impossible', 'Aucun équipement ciblé.');
+  const item = state.items[itemId];
+  if (!item || item.location.kind !== 'inventory') return failure(state, 'Impossible', 'L’objet doit d’abord être transporté.');
+  const equipmentDefinition = getItemDefinition(item.definitionId)?.equipment;
+  if (!equipmentDefinition) return failure(state, 'Impossible', 'Cet objet ne peut pas être équipé.');
+  if (isItemEquipped(state, itemId)) return failure(state, 'Déjà équipé', 'Cet objet est déjà porté.');
+
+  const next = cloneState(state);
+  const equipment = next.player.equipment ?? { back: null, waist: null };
+  equipment[equipmentDefinition.slot] = itemId;
+  next.player.equipment = equipment;
+  if (getCarryLoad(next) > getCarryCapacity(next) + 0.000001) {
+    return failure(state, 'Charge incompatible', 'Cet échange de sac laisserait trop de matériel pour la capacité disponible.');
+  }
+  advanceTime(next, 6);
+  const body = equipmentDefinition.slot === 'back'
+    ? `Le sac porté au dos augmente votre capacité. Charge : ${capacityText(next)}.`
+    : `La sacoche à la taille complète votre équipement. Charge : ${capacityText(next)}.`;
+  return success(next, `Vous équipez ${item.name.toLowerCase()}.`, body, 6);
+}
+
+export function unequipItem(state: GameState, itemId: string | undefined): EngineTransition {
+  if (!itemId || !isItemEquipped(state, itemId)) return failure(state, 'Impossible', 'Cet objet n’est pas équipé.');
+  const item = state.items[itemId];
+  const equipmentDefinition = item ? getItemDefinition(item.definitionId)?.equipment : undefined;
+  if (!item || !equipmentDefinition) return failure(state, 'Impossible', 'Cet équipement n’est plus disponible.');
+
+  const next = cloneState(state);
+  const equipment = next.player.equipment ?? { back: null, waist: null };
+  equipment[equipmentDefinition.slot] = null;
+  next.player.equipment = equipment;
+  if (getCarryLoad(next) > getCarryCapacity(next) + 0.000001) {
+    return failure(state, 'Trop chargé', 'Vous transportez trop de matériel pour retirer ce sac maintenant.');
+  }
+  advanceTime(next, 4);
+  return success(next, `Vous retirez ${item.name.toLowerCase()}.`, `Capacité disponible : ${capacityText(next)}.`, 4);
 }
 
 export function eatItem(state: GameState, itemId: string | undefined): EngineTransition {
