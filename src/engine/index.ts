@@ -13,6 +13,7 @@ export { environmentPhysiologyModifiers, effectivePhysiologyRates } from './phys
 export { connectedDestinations, containerContents, containersAtCurrentLocation, currentLocation, inventoryItems, looseItemsAtCurrentLocation } from './selectors';
 export { createInitialState } from './state';
 export { formatClock } from './time';
+export { createVerticalSliceState, dispatchVerticalSlice, getVerticalSliceSnapshot } from './vertical-slice';
 export { createWeatherState, ensureWeatherState, getWeatherState, normalizeWeatherCondition, setWeatherState, WEATHER_CONDITIONS } from './weather';
 export { addWorldEventSource, applyDueWorldEventTransitions, createWorldEventSource, deterministicWorldEventUnit, ensureWorldEventSimulationState, getNextWorldEventBoundary, secondsUntilNextWorldEventBoundary, setWorldEventSeed, synchronizeWorldEventSourceSchedule, WORLD_EVENT_SEED } from './world-events';
 export type { InvariantViolation } from './invariants';
@@ -21,6 +22,7 @@ export type { LocationEnvironmentState, LocationEnvironmentType, PlayerEnvironme
 export type { LocationEnvironmentViolation } from './location-environment-validation';
 export type { PerceptionChannel, PerceptionChannelId, WorldEventPerception } from './perception';
 export type { PhoneCapabilities } from './phone';
+export type { DestructibleKind, LocalPoint, VerticalSliceCommand, VerticalSliceEvent, VerticalSliceResult, VerticalSliceSnapshot, VerticalSliceState, VerticalSliceTransition } from './vertical-slice';
 export type { WeatherCondition, WeatherState } from './weather';
 export type { WorldEventBoundary } from './world-events';
 export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType, PhoneCallRecord, PhoneMessageRecord, PhoneState, ProceduralWorldEventTransition, SensoryProfile, WorldEventDefinitionId, WorldEventSourceState, WorldEventState, WorldPosition } from './model';
