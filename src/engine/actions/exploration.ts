@@ -1,4 +1,5 @@
 import { getItemDefinition } from '../../content/items';
+import { applyPhysicalExertion, getEncumbranceProfile, scalePhysicalDuration } from '../encumbrance';
 import { getDistanceMeters } from '../perception';
 import type { EngineTransition, GameState, ItemState, LocationState } from '../model';
 import { cloneState, recordLocationVisit } from '../state';
@@ -17,7 +18,7 @@ const MAX_FREE_WALK_DISTANCE_M = 120;
 const WALKING_SPEED_MPS = 1.25;
 const OBSERVE_SECONDS = 25;
 const ENTER_SECONDS = 12;
-const SEARCH_SECONDS = 180;
+const SEARCH_SECONDS = 12 * 60;
 const LEAVE_SECONDS = 8;
 
 function parseTarget(value: string | undefined): MapTravelTarget | null {
@@ -66,10 +67,10 @@ function requireOutsideForMapTravel(state: GameState): EngineTransition | null {
   return null;
 }
 
-function createLootItem(locationId: string, sourceId: string, index: number, definitionId: string): ItemState {
+function createLootItem(locationId: string, sourceId: string, layer: 'surface' | 'deep', index: number, definitionId: string): ItemState {
   const definition = getItemDefinition(definitionId);
   const item: ItemState = {
-    id: `${locationId}_loot_${stableHash(`${sourceId}:${index}:${definitionId}`).toString(16)}`,
+    id: `${locationId}_loot_${stableHash(`${sourceId}:${layer}:${index}:${definitionId}`).toString(16)}`,
     definitionId,
     name: definition?.name ?? 'Objet',
     location: { kind: 'location', id: locationId },
@@ -95,23 +96,32 @@ function createLootItem(locationId: string, sourceId: string, index: number, def
   return item;
 }
 
-function revealDeterministicLoot(state: GameState, location: LocationState): string[] {
+function lootProfile(sourceId: string): { surface: readonly string[]; deep: readonly string[] } {
+  const profiles = [
+    { surface: ['water_bottle'], deep: ['flashlight', 'waist_bag', 'apple'] },
+    { surface: ['apple'], deep: ['water_bottle', 'towel', 'flashlight'] },
+    { surface: ['towel'], deep: ['waist_bag', 'water_bottle', 'apple'] },
+    { surface: ['water_bottle'], deep: ['backpack', 'flashlight', 'towel'] },
+  ] as const;
+  return profiles[stableHash(sourceId) % profiles.length] ?? profiles[0];
+}
+
+function revealLootLayer(state: GameState, location: LocationState, layer: 'surface' | 'deep'): string[] {
   const site = location.poiSite;
   if (!site) return [];
-  const profiles = [
-    ['water_bottle', 'flashlight'],
-    ['apple', 'water_bottle'],
-    ['towel', 'waist_bag'],
-    ['water_bottle', 'backpack'],
-  ] as const;
-  const profile = profiles[stableHash(site.sourceId) % profiles.length] ?? profiles[0];
+  const definitions = lootProfile(site.sourceId)[layer];
   const names: string[] = [];
-  profile.forEach((definitionId, index) => {
-    const item = createLootItem(location.id, site.sourceId, index, definitionId);
+  definitions.forEach((definitionId, index) => {
+    const item = createLootItem(location.id, site.sourceId, layer, index, definitionId);
     if (!state.items[item.id]) state.items[item.id] = item;
     names.push(item.name.toLowerCase());
   });
   return names;
+}
+
+function exertionSuffix(state: GameState): string {
+  const encumbrance = getEncumbranceProfile(state);
+  return encumbrance.tier === 'light' ? '' : ` ${encumbrance.label} ralentit vos gestes et accentue l’effort.`;
 }
 
 export function observeLocation(state: GameState): EngineTransition {
@@ -141,16 +151,24 @@ export function enterPoi(state: GameState): EngineTransition {
   if (site.phase === 'inside') return failure(state, 'Déjà à l’intérieur', 'Vous êtes déjà entré dans ce lieu.');
   if (!site.observed) return failure(state, 'Accès mal évalué', 'Observez d’abord les abords avant de vous engager à l’intérieur.');
 
+  const elapsedSeconds = scalePhysicalDuration(state, ENTER_SECONDS, 'action');
   const next = cloneState(state);
-  const nextSite = next.locations[location.id]?.poiSite;
-  if (!nextSite) return failure(state, 'Lieu indisponible', 'Le lieu n’est plus accessible.');
+  const nextLocation = next.locations[location.id];
+  const nextSite = nextLocation?.poiSite;
+  if (!nextLocation || !nextSite) return failure(state, 'Lieu indisponible', 'Le lieu n’est plus accessible.');
   nextSite.phase = 'inside';
-  advanceTime(next, ENTER_SECONDS);
+  const newlyVisible = nextSite.surfaceRevealed ? [] : revealLootLayer(next, nextLocation, 'surface');
+  nextSite.surfaceRevealed = true;
+  advanceTime(next, elapsedSeconds);
+  applyPhysicalExertion(next, elapsedSeconds, 0.5);
+  const visibleText = newlyVisible.length > 0
+    ? ` Sans fouiller, vous repérez déjà ${newlyVisible.join(' et ')}.`
+    : '';
   return success(
     next,
     `Vous entrez dans ${location.name}.`,
-    'L’air et l’acoustique changent aussitôt. Le lieu paraît avoir été abandonné sans préparation, comme si son activité s’était interrompue d’un seul coup.',
-    ENTER_SECONDS,
+    `L’air et l’acoustique changent aussitôt. Le lieu paraît avoir été abandonné sans préparation, comme si son activité s’était interrompue d’un seul coup.${visibleText}${exertionSuffix(state)}`,
+    elapsedSeconds,
   );
 }
 
@@ -161,20 +179,23 @@ export function searchLocation(state: GameState): EngineTransition {
   if (site.phase !== 'inside') return failure(state, 'Vous êtes dehors', 'Entrez dans le lieu avant de commencer une fouille méthodique.');
   if (site.searched) return failure(state, 'Déjà fouillé', 'Vous avez déjà inspecté méthodiquement les zones accessibles de ce lieu.');
 
+  const elapsedSeconds = scalePhysicalDuration(state, SEARCH_SECONDS, 'action');
   const next = cloneState(state);
   const nextLocation = next.locations[location.id];
   const nextSite = nextLocation?.poiSite;
   if (!nextLocation || !nextSite) return failure(state, 'Lieu indisponible', 'Le lieu n’est plus accessible.');
   nextSite.searched = true;
-  const found = revealDeterministicLoot(next, nextLocation);
-  advanceTime(next, SEARCH_SECONDS);
+  const found = revealLootLayer(next, nextLocation, 'deep');
+  advanceTime(next, elapsedSeconds);
+  applyPhysicalExertion(next, elapsedSeconds, 0.75);
+  const minutes = Math.max(1, Math.round(elapsedSeconds / 60));
   return success(
     next,
     'Vous fouillez méthodiquement.',
     found.length > 0
-      ? `Après plusieurs minutes, vous mettez de côté ${found.join(' et ')}. Rien n’indique que quelqu’un soit revenu ici depuis la disparition.`
-      : 'La fouille ne révèle rien de réellement exploitable.',
-    SEARCH_SECONDS,
+      ? `Pendant environ ${minutes} minutes, vous inspectez tiroirs, recoins, réserves et zones moins évidentes. Vous découvrez en plus ${found.join(', ')}. Cette fouille approfondie révèle nettement plus qu’un simple passage dans le lieu.${exertionSuffix(state)}`
+      : `Après environ ${minutes} minutes d’inspection attentive, rien de réellement exploitable ne se révèle.${exertionSuffix(state)}`,
+    elapsedSeconds,
   );
 }
 
@@ -184,12 +205,14 @@ export function leavePoi(state: GameState): EngineTransition {
   if (!location || !site) return failure(state, 'Aucune sortie ici', 'Vous n’êtes pas dans un lieu exploratoire.');
   if (site.phase !== 'inside') return failure(state, 'Déjà dehors', 'Vous vous trouvez déjà à l’extérieur.');
 
+  const elapsedSeconds = scalePhysicalDuration(state, LEAVE_SECONDS, 'action');
   const next = cloneState(state);
   const nextSite = next.locations[location.id]?.poiSite;
   if (!nextSite) return failure(state, 'Lieu indisponible', 'Le lieu n’est plus accessible.');
   nextSite.phase = 'outside';
-  advanceTime(next, LEAVE_SECONDS);
-  return success(next, `Vous ressortez de ${location.name}.`, 'Vous retrouvez l’air extérieur et le silence du quartier.', LEAVE_SECONDS);
+  advanceTime(next, elapsedSeconds);
+  applyPhysicalExertion(next, elapsedSeconds, 0.5);
+  return success(next, `Vous ressortez de ${location.name}.`, `Vous retrouvez l’air extérieur et le silence du quartier.${exertionSuffix(state)}`, elapsedSeconds);
 }
 
 export function walkToMapPoint(state: GameState, encodedTarget: string | undefined): EngineTransition {
@@ -207,7 +230,8 @@ export function walkToMapPoint(state: GameState, encodedTarget: string | undefin
   }
   if (distanceM < 2) return failure(state, 'Déjà ici', 'Vous êtes déjà pratiquement à cet endroit.');
 
-  const elapsedSeconds = Math.max(2, Math.round(distanceM / WALKING_SPEED_MPS));
+  const baseSeconds = Math.max(2, Math.round(distanceM / WALKING_SPEED_MPS));
+  const elapsedSeconds = scalePhysicalDuration(state, baseSeconds, 'movement');
   const next = cloneState(state);
   const origin = next.locations[state.player.locationId];
   const locationId = 'map_walk_position';
@@ -223,11 +247,12 @@ export function walkToMapPoint(state: GameState, encodedTarget: string | undefin
   next.player.locationId = locationId;
   recordLocationVisit(next, locationId);
   advanceTime(next, elapsedSeconds);
+  applyPhysicalExertion(next, elapsedSeconds, 1);
 
   return success(
     next,
     'Vous avancez à pied.',
-    `Vous parcourez environ ${Math.max(1, Math.round(distanceM))} m.`,
+    `Vous parcourez environ ${Math.max(1, Math.round(distanceM))} m.${exertionSuffix(state)}`,
     elapsedSeconds,
   );
 }
@@ -246,7 +271,8 @@ export function travelToMapPoi(state: GameState, encodedTarget: string | undefin
     return failure(state, 'Trop loin à pied', 'Cette destination dépasse encore votre zone d’exploration immédiate.');
   }
 
-  const elapsedSeconds = Math.max(15, Math.round(distanceM / WALKING_SPEED_MPS));
+  const baseSeconds = Math.max(15, Math.round(distanceM / WALKING_SPEED_MPS));
+  const elapsedSeconds = scalePhysicalDuration(state, baseSeconds, 'movement');
   const next = cloneState(state);
 
   let destinationId: string;
@@ -266,22 +292,23 @@ export function travelToMapPoi(state: GameState, encodedTarget: string | undefin
         ventilation: 1,
         features: {},
         position: { lat: target.lat, lon: target.lon },
-        poiSite: { sourceId: target.id, phase: 'outside', observed: false, searched: false },
+        poiSite: { sourceId: target.id, phase: 'outside', observed: false, surfaceRevealed: false, searched: false },
       };
     } else if (!existing.poiSite) {
-      existing.poiSite = { sourceId: target.id, phase: 'outside', observed: false, searched: false };
+      existing.poiSite = { sourceId: target.id, phase: 'outside', observed: false, surfaceRevealed: false, searched: false };
     }
   }
 
   next.player.locationId = destinationId;
   recordLocationVisit(next, destinationId);
   advanceTime(next, elapsedSeconds);
+  applyPhysicalExertion(next, elapsedSeconds, 1);
 
   const roundedDistance = Math.max(1, Math.round(distanceM));
   return success(
     next,
     target.id === 'home' ? 'Retour au domicile' : target.name,
-    `Vous parcourez environ ${roundedDistance} m à pied. Le temps continue de s’écouler pendant le trajet.`,
+    `Vous parcourez environ ${roundedDistance} m à pied. Le temps continue de s’écouler pendant le trajet.${exertionSuffix(state)}`,
     elapsedSeconds,
   );
 }
