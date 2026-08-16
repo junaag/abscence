@@ -1,6 +1,7 @@
 import { activeEffectsAt } from '../engine/effects';
 import { isElectricityAvailable, isWaterAvailable } from '../engine/infrastructure';
 import type { GameState, ItemState, PersistentEffect } from '../engine/model';
+import { getActivePoiZone, poiZones } from '../engine/poi-sites';
 import { currentLocation, looseItemsAtCurrentLocation } from '../engine/selectors';
 
 function joinFrench(items: string[]): string {
@@ -90,13 +91,35 @@ export function describeCurrentLocation(state: GameState): string {
           ? `Vous arrivez devant ${location.name}. De l’extérieur, le lieu paraît intact mais désert. Les accès, les vitrages et les objets visibles derrière les ouvertures restent difficiles à lire d’un simple coup d’œil. Aucun mouvement humain ne vient rompre le calme.`
           : `Vous revenez devant ${location.name}. Le bâtiment est toujours silencieux et ses abords n’ont visiblement pas changé.`;
       } else {
-        base = `Vous restez devant ${location.name}. Après avoir observé les abords, vous avez une meilleure idée des accès et de ce qui est visible depuis l’extérieur. Rien n’a bougé pendant votre observation.`;
+        base = `Vous restez devant ${location.name}. Après avoir observé les abords, vous distinguez mieux l’organisation générale du lieu.`;
+        if (site.entranceLocked) base += ' L’accès principal est toujours verrouillé.';
+        else if (site.entranceForced) base += ' L’accès que vous avez forcé reste ouvert.';
+        else base += ' L’accès principal paraît praticable.';
       }
-    } else if (!site.searched) {
-      base = `À l’intérieur de ${location.name}, le silence devient plus dense. L’endroit semble avoir été quitté au milieu de son fonctionnement normal : objets en place, passages dégagés, aucune trace évidente d’un départ organisé. Plusieurs zones pourraient être fouillées plus attentivement.`;
     } else {
-      base = `L’intérieur de ${location.name} vous est maintenant familier. Vous avez déjà inspecté méthodiquement les zones accessibles.`;
-      if (items.length > 0) base += ` Ce que vous avez mis de côté reste visible : ${joinFrench(items)}.`;
+      const zone = getActivePoiZone(site);
+      const totalZones = poiZones(site).length;
+      if (!zone) {
+        base = `Vous êtes à l’intérieur de ${location.name}. Le lieu reste silencieux et son organisation intérieure demande encore à être comprise.`;
+      } else {
+        base = `Vous êtes dans ${zone.name.toLowerCase()}, à l’intérieur de ${location.name}.`;
+        if (!zone.searched) {
+          base += ' Ce que vous voyez ici correspond seulement à ce qu’un regard rapide permet de repérer ; les rangements, recoins et surfaces moins évidentes n’ont pas encore été fouillés méthodiquement.';
+        } else {
+          base += ' Vous avez déjà pris le temps d’inspecter méthodiquement cette zone.';
+        }
+        if (items.length > 0) base += ` Restent visibles ici : ${joinFrench(items)}.`;
+        if (zone.risk?.discovered && !zone.risk.resolved) {
+          base += ` ${zone.risk.description}`;
+        } else if (zone.risk?.triggered) {
+          base += ' Le danger que vous aviez rencontré ici ne vous surprendra plus de la même manière.';
+        }
+        if (zone.clue?.discovered) base += ` Un détail continue de vous revenir : ${zone.clue.text}`;
+        if (totalZones > 1) {
+          const searchedCount = poiZones(site).filter((entry) => entry.searched).length;
+          base += ` Vous avez fouillé ${searchedCount} zone${searchedCount > 1 ? 's' : ''} sur ${totalZones}.`;
+        }
+      }
     }
   } else {
     base = firstVisit
