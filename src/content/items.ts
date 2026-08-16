@@ -27,11 +27,16 @@ export interface InspectionComponent {
   operation?: string;
 }
 
+export interface KeyComponent {
+  unlockSeconds: number;
+}
+
 export interface ItemDefinition {
   id: string;
   name: string;
   portable?: boolean;
   inspection?: InspectionComponent;
+  key?: KeyComponent;
   battery?: BatteryComponent;
   usable?: UsableComponent;
   powerSource?: PowerSourceComponent;
@@ -73,8 +78,9 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
     name: 'Petite clé',
     inspection: Object.freeze({
       role: 'Une petite clé métallique. Sa serrure correspondante n’est pas identifiée.',
-      operation: 'Il faudra trouver une serrure compatible avant de pouvoir déterminer son utilité exacte.',
+      operation: 'Elle peut déverrouiller une serrure portant le même code mécanique.',
     }),
+    key: Object.freeze({ unlockSeconds: 4 }),
   }),
   smartphone: Object.freeze({
     id: 'smartphone',
