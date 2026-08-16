@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { performAction } from '../../src/engine/actions';
 import { loadState, SAVE_KEY } from '../../src/engine/persistence';
 import { getPhoneCapabilities, phoneCalls, phoneDeviceItemId, phoneMessages } from '../../src/engine/phone';
 import { createInitialState } from '../../src/engine/state';
@@ -57,6 +58,35 @@ describe('phone state', () => {
     });
   });
 
+  it('places a real outgoing family call with time battery history and stress consequences', () => {
+    const state = createInitialState();
+    const initialBattery = state.items.phone_01?.batteryPercent ?? 0;
+    const initialStress = state.player.needs.stress;
+    const transition = performAction(state, { id: 'CALL_CONTACT', targetId: 'wife' });
+
+    expect(transition.result.success).toBe(true);
+    expect(transition.result.elapsedSeconds).toBe(25);
+    expect(transition.state.engine.elapsedSeconds).toBe(25);
+    expect(transition.state.phone.calls[0]).toMatchObject({ contactName: 'Épouse', direction: 'outgoing' });
+    expect(transition.state.phone.calls[0]?.displayTime).toContain('Aujourd’hui · 07:12');
+    expect(transition.state.items.phone_01?.batteryPercent).toBeLessThan(initialBattery);
+    expect(transition.state.player.needs.stress).toBeGreaterThan(initialStress);
+  });
+
+  it('sends the family search SMS as persistent phone history', () => {
+    const state = createInitialState();
+    const transition = performAction(state, { id: 'SEND_SMS_CONTACT', targetId: 'alice' });
+
+    expect(transition.result.success).toBe(true);
+    expect(transition.result.elapsedSeconds).toBe(8);
+    expect(transition.state.phone.messages[0]).toMatchObject({
+      contactName: 'Alice',
+      preview: 'Vous : « Où êtes-vous ? Répondez-moi. »',
+      kind: 'text',
+    });
+    expect(transition.state.phone.messages[0]?.displayTime).toContain('aujourd’hui · 07:12');
+  });
+
   it('keeps local history offline while communications follow the mobile network', () => {
     const state = createInitialState();
     state.infrastructure.mobile.available = false;
@@ -69,6 +99,9 @@ describe('phone state', () => {
       canSendSms: false,
       canUseData: false,
     });
+    const failedCall = performAction(state, { id: 'CALL_CONTACT', targetId: 'wife' });
+    expect(failedCall.result.success).toBe(false);
+    expect(failedCall.state).toBe(state);
   });
 
   it('uses the exact v0.1.8 SMS/call/data signal thresholds', () => {
