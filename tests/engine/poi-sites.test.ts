@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { getContextActions, performAction } from '../../src/engine/actions';
-import type { PoiSiteCategory } from '../../src/engine/model';
 import { looseItemsAtCurrentLocation } from '../../src/engine/selectors';
 import { createInitialState } from '../../src/engine/state';
+import type { MapPoi, MapPoiCategory } from '../../src/ui/map-pois';
+import { buildPoiBlueprint } from '../../src/ui/poi-content';
 
-function target(id: string, name: string, lat: number, lon: number, category: PoiSiteCategory, typeLabel: string): string {
-  return encodeURIComponent(JSON.stringify({ id, name, lat, lon, category, typeLabel }));
+function target(id: string, name: string, lat: number, lon: number, category: MapPoiCategory, typeLabel: string): string {
+  const poi: MapPoi = { id, name, lat, lng: lon, category, typeLabel };
+  return encodeURIComponent(JSON.stringify({ id, name, lat, lon, category, typeLabel, blueprint: buildPoiBlueprint(poi) }));
 }
 
 function reachGarden() {
@@ -15,7 +17,7 @@ function reachGarden() {
   return state;
 }
 
-function reachPoi(category: PoiSiteCategory, typeLabel: string, name: string) {
+function reachPoi(category: MapPoiCategory, typeLabel: string, name: string) {
   let state = reachGarden();
   state = performAction(state, {
     id: 'TRAVEL_TO_MAP_POI',
