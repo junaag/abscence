@@ -1,7 +1,18 @@
 import { assertValidState } from '../invariants';
 import type { ActionId, EngineTransition, GameAction, GameState } from '../model';
 import { openContainer } from './containers';
-import { enterPoi, leavePoi, observeLocation, searchLocation, travelToMapPoi, walkToMapPoint } from './exploration';
+import {
+  enterPoi,
+  forcePoiAccess,
+  forcePoiZone,
+  leavePoi,
+  movePoiZone,
+  observeLocation,
+  searchLocation,
+  securePoiRisk,
+  travelToMapPoi,
+  walkToMapPoint,
+} from './exploration';
 import { chargeItem, drinkItem, eatItem, equipItem, examineItem, fillLiquidContainer, takeItem, unequipItem, useItem } from './items';
 import { move, openConnection } from './movement';
 import { callContact, sendSmsContact } from './phone';
@@ -18,7 +29,11 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
     case 'TRAVEL_TO_MAP_POI': return travelToMapPoi(state, action.targetId);
     case 'WALK_TO_MAP_POINT': return walkToMapPoint(state, action.targetId);
     case 'OBSERVE_LOCATION': return observeLocation(state);
+    case 'FORCE_POI_ACCESS': return forcePoiAccess(state);
     case 'ENTER_POI': return enterPoi(state);
+    case 'MOVE_POI_ZONE': return movePoiZone(state, action.targetId);
+    case 'FORCE_POI_ZONE': return forcePoiZone(state, action.targetId);
+    case 'SECURE_POI_RISK': return securePoiRisk(state);
     case 'SEARCH_LOCATION': return searchLocation(state);
     case 'LEAVE_POI': return leavePoi(state);
     case 'OPEN_CONNECTION': return openConnection(state, action.targetId);
