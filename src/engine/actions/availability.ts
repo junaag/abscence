@@ -72,7 +72,9 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
   const kind = itemKind(item);
 
   if (kind === 'food') {
-    actions.push({ id: 'EAT_ITEM', targetId: itemId, label: 'Manger', detail: inInventory ? undefined : 'Manger directement sans ranger l’objet.' });
+    const foodAction: ActionOption = { id: 'EAT_ITEM', targetId: itemId, label: 'Manger' };
+    if (!inInventory) foodAction.detail = 'Manger directement sans ranger l’objet.';
+    actions.push(foodAction);
   }
 
   if (kind === 'liquid-container') {
