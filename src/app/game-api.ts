@@ -15,6 +15,7 @@ export {
   getCarryLoad,
   getContainerActions,
   getContextActions,
+  getEncumbranceProfile,
   getItemActions,
   getMobileNetworkState,
   getPhoneCapabilities,
@@ -32,6 +33,8 @@ export {
 export type {
   ActionOption,
   ActionResult,
+  EncumbranceProfile,
+  EncumbranceTier,
   GameAction,
   GameState,
   PhoneContactOption,
