@@ -1,5 +1,6 @@
 import { getItemDefinition } from '../../content/items';
 import { activeEffectsAt } from '../effects';
+import { compatibleKeyForLock } from '../locks';
 import type { ActionOption, GameState, ItemState } from '../model';
 import { WATER_RULES } from '../rules';
 import {
@@ -24,7 +25,17 @@ function localPowerSources(state: GameState): ItemState[] {
 export function getContextActions(state: GameState): ActionOption[] {
   const actions: ActionOption[] = [];
   for (const { connection, location } of connectedDestinations(state)) {
-    if (connection.locked) continue;
+    if (connection.locked) {
+      const key = compatibleKeyForLock(state, connection.lockCode);
+      if (key) actions.push({
+        id: 'UNLOCK_TARGET',
+        targetId: connection.id,
+        sourceId: key.id,
+        label: `Déverrouiller vers ${location.name}`,
+        detail: `Utiliser ${key.name.toLowerCase()}.`,
+      });
+      continue;
+    }
     if (connection.open) actions.push({ id: 'MOVE', targetId: location.id, label: `Aller vers ${location.name}`, detail: `${connection.travelSeconds} s` });
     else actions.push({ id: 'OPEN_CONNECTION', targetId: connection.id, label: `Ouvrir vers ${location.name}`, detail: `${connection.openSeconds} s` });
   }
@@ -58,7 +69,17 @@ export function getContextActions(state: GameState): ActionOption[] {
 
 export function getContainerActions(state: GameState, containerId: string): ActionOption[] {
   const container = state.containers[containerId];
-  if (!container || container.locationId !== state.player.locationId || container.locked || container.open) return [];
+  if (!container || container.locationId !== state.player.locationId || container.open) return [];
+  if (container.locked) {
+    const key = compatibleKeyForLock(state, container.lockCode);
+    return key ? [{
+      id: 'UNLOCK_TARGET',
+      targetId: containerId,
+      sourceId: key.id,
+      label: 'Déverrouiller',
+      detail: `Utiliser ${key.name.toLowerCase()}.`,
+    }] : [];
+  }
   return [{ id: 'OPEN_CONTAINER', targetId: containerId, label: 'Ouvrir', detail: 'Le contenu devient immédiatement visible.' }];
 }
 
