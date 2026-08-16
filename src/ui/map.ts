@@ -161,8 +161,15 @@ function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character] ?? character);
 }
 
-function encodeTravelTarget(target: { id: string; name: string; lat: number; lng: number }): string {
-  return encodeURIComponent(JSON.stringify({ id: target.id, name: target.name, lat: target.lat, lon: target.lng }));
+function encodeTravelTarget(target: { id: string; name: string; lat: number; lng: number; category?: string; typeLabel?: string }): string {
+  return encodeURIComponent(JSON.stringify({
+    id: target.id,
+    name: target.name,
+    lat: target.lat,
+    lon: target.lng,
+    ...(target.category ? { category: target.category } : {}),
+    ...(target.typeLabel ? { typeLabel: target.typeLabel } : {}),
+  }));
 }
 
 function actionButton(label: string, actionId: 'TRAVEL_TO_MAP_POI' | 'WALK_TO_MAP_POINT', encodedTarget: string, handler: (encodedTarget: string) => void): HTMLButtonElement {
