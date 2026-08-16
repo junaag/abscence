@@ -26,6 +26,7 @@ test('only discovered POIs render and a failed travel explains why instead of lo
 
   await expect(page.locator('.leaflet-marker-icon[title="Domicile"]')).toBeVisible({ timeout: 6000 });
   await expect(page.locator('.leaflet-marker-icon[title="Station Ingres"]')).toBeVisible();
+  await expect(page.locator('[aria-label="Automobile — Station service"]')).toBeVisible();
   await expect(page.locator('.leaflet-marker-icon[title="Pharmacie du quartier"]')).toHaveCount(0);
   await expect(page.locator('[data-poi-category="Santé"]')).toHaveCount(0);
 
@@ -36,7 +37,7 @@ test('only discovered POIs render and a failed travel explains why instead of lo
   await page.locator('.leaflet-marker-icon[title="Station Ingres"]').click();
   const popup = page.locator('.leaflet-popup-content');
   await expect(popup).toContainText('Automobile');
-  await expect(popup).toContainText('⛽');
+  await expect(popup).toContainText('Station service');
   await popup.getByRole('button', { name: 'S’y rendre' }).click();
 
   await expect(page.locator('.map-result')).toContainText('Impossible depuis ici');
