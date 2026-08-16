@@ -1,7 +1,7 @@
 import { assertValidState } from '../invariants';
 import type { ActionId, EngineTransition, GameAction, GameState } from '../model';
 import { openContainer } from './containers';
-import { travelToMapPoi, walkToMapPoint } from './exploration';
+import { enterPoi, leavePoi, observeLocation, searchLocation, travelToMapPoi, walkToMapPoint } from './exploration';
 import { chargeItem, drinkItem, eatItem, equipItem, examineItem, fillLiquidContainer, takeItem, unequipItem, useItem } from './items';
 import { move, openConnection } from './movement';
 import { callContact, sendSmsContact } from './phone';
@@ -17,6 +17,10 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
     case 'MOVE': return move(state, action.targetId);
     case 'TRAVEL_TO_MAP_POI': return travelToMapPoi(state, action.targetId);
     case 'WALK_TO_MAP_POINT': return walkToMapPoint(state, action.targetId);
+    case 'OBSERVE_LOCATION': return observeLocation(state);
+    case 'ENTER_POI': return enterPoi(state);
+    case 'SEARCH_LOCATION': return searchLocation(state);
+    case 'LEAVE_POI': return leavePoi(state);
     case 'OPEN_CONNECTION': return openConnection(state, action.targetId);
     case 'OPEN_CONTAINER': return openContainer(state, action.targetId);
     case 'TAKE_ITEM': return takeItem(state, action.targetId);
