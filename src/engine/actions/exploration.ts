@@ -21,6 +21,7 @@ interface MapTravelTarget {
   lon: number;
   category?: string;
   typeLabel?: string;
+  blueprint?: unknown;
 }
 
 const MAX_MAP_TRAVEL_DISTANCE_M = 1600;
@@ -53,6 +54,7 @@ function parseTarget(value: string | undefined): MapTravelTarget | null {
       lon,
       ...(category ? { category: category.slice(0, 60) } : {}),
       ...(typeLabel ? { typeLabel: typeLabel.slice(0, 80) } : {}),
+      ...(parsed.blueprint !== undefined ? { blueprint: parsed.blueprint } : {}),
     };
   } catch {
     return null;
@@ -106,8 +108,6 @@ function createLootItem(locationId: string, sourceId: string, zoneId: string, la
     item.condition = 'Bon état';
   } else if (definitionId === 'towel') {
     item.condition = 'Sec';
-  } else if (definitionId === 'crowbar' || definitionId === 'tool_kit' || definitionId === 'work_gloves') {
-    item.condition = 'Utilisable';
   } else if (definitionId === 'first_aid_kit' || definitionId === 'bandage_pack') {
     item.condition = 'Emballage intact';
   } else if (definitionId === 'canned_food') {
@@ -192,15 +192,8 @@ export function observeLocation(state: GameState): EngineTransition {
   ensurePoiSiteStructure(nextSite);
   nextSite.observed = true;
   advanceTime(next, OBSERVE_SECONDS);
-  const access = nextSite.entranceLocked
-    ? ' L’accès principal est verrouillé ; entrer demandera de le forcer.'
-    : ' L’accès principal paraît praticable.';
-  return success(
-    next,
-    'Vous observez les lieux.',
-    `Vous prenez le temps de regarder les accès, les vitrages et ce qui est visible depuis l’extérieur. Aucun mouvement humain ne se manifeste.${access}`,
-    OBSERVE_SECONDS,
-  );
+  const access = nextSite.entranceLocked ? ' L’accès principal est verrouillé ; entrer demandera de le forcer.' : ' L’accès principal paraît praticable.';
+  return success(next, 'Vous observez les lieux.', `Vous examinez les accès et ce qui est visible depuis l’extérieur. Aucun mouvement humain.${access}`, OBSERVE_SECONDS);
 }
 
 export function forcePoiAccess(state: GameState): EngineTransition {
@@ -221,14 +214,7 @@ export function forcePoiAccess(state: GameState): EngineTransition {
   advanceTime(next, elapsedSeconds);
   applyPhysicalExertion(next, elapsedSeconds, 0.9);
   applyForcedAccessCost(next, usedCrowbar);
-  return success(
-    next,
-    'Vous forcez l’accès.',
-    usedCrowbar
-      ? 'Le pied-de-biche fait levier efficacement. L’accès cède sans vous obliger à vous exposer longtemps.'
-      : 'Sans outil réellement adapté, l’opération est lente, bruyante et éprouvante. L’accès finit par céder.',
-    elapsedSeconds,
-  );
+  return success(next, 'Vous forcez l’accès.', usedCrowbar ? 'Le pied-de-biche fait levier ; l’accès cède rapidement.' : 'Sans outil adapté, l’opération est lente, bruyante et éprouvante.', elapsedSeconds);
 }
 
 export function enterPoi(state: GameState): EngineTransition {
@@ -253,12 +239,7 @@ export function enterPoi(state: GameState): EngineTransition {
   advanceTime(next, elapsedSeconds);
   applyPhysicalExertion(next, elapsedSeconds, 0.5);
   const visibleText = newlyVisible.length > 0 ? ` Sans fouiller, vous repérez déjà ${newlyVisible.join(' et ')}.` : '';
-  return success(
-    next,
-    `Vous entrez dans ${location.name}.`,
-    `Vous débouchez dans ${firstZone.name.toLowerCase()}. L’air et l’acoustique changent aussitôt ; le lieu semble avoir été abandonné en plein fonctionnement.${visibleText}${riskText(firstZone.risk)}${exertionSuffix(state)}`,
-    elapsedSeconds,
-  );
+  return success(next, `Vous entrez dans ${location.name}.`, `Vous débouchez dans ${firstZone.name.toLowerCase()}. Le lieu semble avoir été abandonné en plein fonctionnement.${visibleText}${riskText(firstZone.risk)}${exertionSuffix(state)}`, elapsedSeconds);
 }
 
 export function movePoiZone(state: GameState, zoneId: string | undefined): EngineTransition {
@@ -282,12 +263,7 @@ export function movePoiZone(state: GameState, zoneId: string | undefined): Engin
   const visible = revealZoneSurface(next, nextLocation, nextTarget);
   advanceTime(next, elapsedSeconds);
   applyPhysicalExertion(next, elapsedSeconds, 0.35);
-  return success(
-    next,
-    `Vous gagnez ${nextTarget.name.toLowerCase()}.`,
-    `${visible.length > 0 ? `À première vue, vous repérez ${visible.join(' et ')}. ` : ''}${nextTarget.risk?.discovered && !nextTarget.risk.resolved ? nextTarget.risk.description : 'La zone reste silencieuse.'}`,
-    elapsedSeconds,
-  );
+  return success(next, `Vous gagnez ${nextTarget.name.toLowerCase()}.`, `${visible.length > 0 ? `Vous repérez ${visible.join(' et ')}. ` : ''}${nextTarget.risk?.discovered && !nextTarget.risk.resolved ? nextTarget.risk.description : 'La zone reste silencieuse.'}`, elapsedSeconds);
 }
 
 export function forcePoiZone(state: GameState, zoneId: string | undefined): EngineTransition {
@@ -314,12 +290,7 @@ export function forcePoiZone(state: GameState, zoneId: string | undefined): Engi
   advanceTime(next, elapsedSeconds);
   applyPhysicalExertion(next, elapsedSeconds, 0.9);
   applyForcedAccessCost(next, usedCrowbar);
-  return success(
-    next,
-    `Vous forcez l’accès vers ${nextTarget.name.toLowerCase()}.`,
-    `${usedCrowbar ? 'Le pied-de-biche réduit nettement l’effort nécessaire.' : 'L’accès résiste longtemps avant de céder.'}${visible.length > 0 ? ` Une fois passé, vous repérez ${visible.join(' et ')}.` : ''}${riskText(nextTarget.risk)}`,
-    elapsedSeconds,
-  );
+  return success(next, `Vous forcez l’accès vers ${nextTarget.name.toLowerCase()}.`, `${usedCrowbar ? 'Le pied-de-biche facilite nettement l’ouverture.' : 'L’accès résiste longtemps avant de céder.'}${visible.length > 0 ? ` Vous repérez ${visible.join(' et ')}.` : ''}${riskText(nextTarget.risk)}`, elapsedSeconds);
 }
 
 export function securePoiRisk(state: GameState): EngineTransition {
@@ -340,7 +311,7 @@ export function securePoiRisk(state: GameState): EngineTransition {
   nextRisk.resolved = true;
   advanceTime(next, elapsedSeconds);
   applyPhysicalExertion(next, elapsedSeconds, 0.65);
-  return success(next, 'Vous sécurisez la zone.', `${risk.description} Vous prenez le temps de réduire suffisamment le danger avant de poursuivre.`, elapsedSeconds);
+  return success(next, 'Vous sécurisez la zone.', `${risk.description} Vous réduisez suffisamment le danger pour poursuivre.`, elapsedSeconds);
 }
 
 export function searchLocation(state: GameState): EngineTransition {
@@ -371,12 +342,7 @@ export function searchLocation(state: GameState): EngineTransition {
   advanceTime(next, elapsedSeconds);
   applyPhysicalExertion(next, elapsedSeconds, 0.75);
   const minutes = Math.max(1, Math.round(elapsedSeconds / 60));
-  return success(
-    next,
-    `Vous fouillez ${nextZone.name.toLowerCase()} méthodiquement.`,
-    `${found.length > 0 ? `Après environ ${minutes} minutes, vous découvrez ${found.join(', ')}.` : `Après environ ${minutes} minutes, rien de réellement exploitable ne se révèle.`}${incident}${clueText}${exertionSuffix(state)}`,
-    elapsedSeconds,
-  );
+  return success(next, `Vous fouillez ${nextZone.name.toLowerCase()} méthodiquement.`, `${found.length > 0 ? `Après environ ${minutes} minutes, vous découvrez ${found.join(', ')}.` : `Après environ ${minutes} minutes, rien d’exploitable.`}${incident}${clueText}${exertionSuffix(state)}`, elapsedSeconds);
 }
 
 export function leavePoi(state: GameState): EngineTransition {
@@ -458,14 +424,17 @@ export function travelToMapPoi(state: GameState, encodedTarget: string | undefin
         ventilation: 1,
         features: {},
         position: { lat: target.lat, lon: target.lon },
-        poiSite: createPoiSiteState(target.id, target.category, target.typeLabel),
+        poiSite: createPoiSiteState(target.id, target.category, target.typeLabel, target.blueprint),
       };
     } else if (!existing.poiSite) {
-      existing.poiSite = createPoiSiteState(target.id, target.category, target.typeLabel);
+      existing.poiSite = createPoiSiteState(target.id, target.category, target.typeLabel, target.blueprint);
     } else {
       ensurePoiSiteStructure(existing.poiSite);
-      if (target.category && existing.poiSite.category === 'Inconnu') existing.poiSite.category = createPoiSiteState(target.id, target.category, target.typeLabel).category;
-      if (target.typeLabel && !existing.poiSite.typeLabel) existing.poiSite.typeLabel = target.typeLabel;
+      if (target.category && existing.poiSite.category === 'Inconnu' && !existing.poiSite.observed && !existing.poiSite.searched) {
+        existing.poiSite = createPoiSiteState(target.id, target.category, target.typeLabel, target.blueprint);
+      } else if (target.typeLabel && !existing.poiSite.typeLabel) {
+        existing.poiSite.typeLabel = target.typeLabel;
+      }
     }
   }
 
@@ -474,10 +443,5 @@ export function travelToMapPoi(state: GameState, encodedTarget: string | undefin
   advanceTime(next, elapsedSeconds);
   applyPhysicalExertion(next, elapsedSeconds, 1);
   const roundedDistance = Math.max(1, Math.round(distanceM));
-  return success(
-    next,
-    target.id === 'home' ? 'Retour au domicile' : target.name,
-    `Vous parcourez environ ${roundedDistance} m à pied. Le temps continue de s’écouler pendant le trajet.${exertionSuffix(state)}`,
-    elapsedSeconds,
-  );
+  return success(next, target.id === 'home' ? 'Retour au domicile' : target.name, `Vous parcourez environ ${roundedDistance} m à pied. Le temps s’écoule pendant le trajet.${exertionSuffix(state)}`, elapsedSeconds);
 }
