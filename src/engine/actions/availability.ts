@@ -8,6 +8,7 @@ import {
   inventoryItems,
   isElectricityAvailable,
   isItemAccessible,
+  isItemEquipped,
   looseItemsAtCurrentLocation,
 } from '../selectors';
 
@@ -50,7 +51,7 @@ export function getContextActions(state: GameState): ActionOption[] {
   }
 
   if (state.player.locationId === 'bedroom' && !state.memory.shoutedForWife) {
-    actions.push({ id: 'SHOUT_FOR_WIFE', label: 'Appeler votre épouse à haute voix', detail: 'Écouter si quelqu’un répond.' });
+    actions.push({ id: 'SHOUT_FOR_WIFE', label: 'Appeler à haute voix', detail: 'Lancer un appel dans la maison et écouter.' });
   }
   actions.push({ id: 'WAIT', label: 'Attendre une minute', seconds: 60 });
   return actions;
@@ -90,6 +91,12 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
   if (!inInventory && definition?.portable !== false) actions.push({ id: 'TAKE_ITEM', targetId: itemId, label: 'Prendre' });
 
   if (inInventory) {
+    if (definition?.equipment) {
+      actions.push(isItemEquipped(state, itemId)
+        ? { id: 'UNEQUIP_ITEM', targetId: itemId, label: 'Retirer', detail: definition.equipment.slot === 'back' ? 'Retirer du dos.' : 'Retirer de la taille.' }
+        : { id: 'EQUIP_ITEM', targetId: itemId, label: 'Équiper', detail: definition.equipment.slot === 'back' ? 'Porter sur le dos.' : 'Attacher à la taille.' });
+    }
+
     if (definition?.usable && (!definition.battery || (item.batteryPercent ?? definition.battery.initialChargePct) > 0)) {
       const label = definition.usable.toggleEnabled ? (item.enabled ? 'Éteindre' : 'Allumer') : 'Utiliser';
       const option: ActionOption = { id: 'USE_ITEM', targetId: itemId, label };
@@ -108,6 +115,5 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
     }
   }
 
-  actions.push({ id: 'EXAMINE_ITEM', targetId: itemId, label: 'Examiner', detail: 'Observer son rôle, son fonctionnement et son état.' });
   return actions;
 }
