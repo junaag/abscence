@@ -1,4 +1,4 @@
-import { createInitialPhoneState } from '../content/phone';
+import { createInitialPhoneState, PHONE_CONTACTS } from '../content/phone';
 import { getMobileNetworkState } from './infrastructure';
 import type { GameState, PhoneCallRecord, PhoneMessageRecord, PhoneState } from './model';
 
@@ -12,6 +12,11 @@ export interface PhoneCapabilities {
   canPlaceCall: boolean;
   canSendSms: boolean;
   canUseData: boolean;
+}
+
+export interface PhoneContactOption {
+  id: string;
+  name: string;
 }
 
 export function ensurePhoneState(state: GameState): PhoneState {
@@ -32,6 +37,10 @@ export function phoneMessages(state: GameState): readonly PhoneMessageRecord[] {
 
 export function phoneDeviceItemId(state: GameState): string {
   return state.phone.deviceItemId;
+}
+
+export function phoneContacts(): readonly PhoneContactOption[] {
+  return PHONE_CONTACTS;
 }
 
 /**
