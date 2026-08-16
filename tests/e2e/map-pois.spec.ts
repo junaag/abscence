@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
       contentType: 'application/json',
       body: JSON.stringify({
         elements: [
-          { type: 'node', id: 1, lat: 43.40536, lon: 5.05485, tags: { amenity: 'fuel', name: 'Station Ingres' } },
+          { type: 'node', id: 1, lat: 43.40546, lon: 5.0548, tags: { amenity: 'fuel', name: 'Station Ingres' } },
           { type: 'node', id: 2, lat: 43.4057, lon: 5.0551, tags: { shop: 'car_repair', name: 'Garage du Sud' } },
           { type: 'node', id: 3, lat: 43.4059, lon: 5.0552, tags: { amenity: 'police', name: 'Police municipale' } },
           { type: 'node', id: 4, lat: 43.4061, lon: 5.0554, tags: { amenity: 'pharmacy', name: 'Pharmacie du quartier' } },
