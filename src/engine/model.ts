@@ -85,7 +85,7 @@ export interface PoiZoneState {
 
 export interface PoiSiteState {
   sourceId: string;
-  category?: PoiSiteCategory;
+  category?: PoiSiteCategory | undefined;
   typeLabel?: string;
   phase: PoiSitePhase;
   observed: boolean;
