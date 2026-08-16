@@ -1,5 +1,6 @@
 export { performAction, getContextActions, getContainerActions, getItemActions } from './actions';
 export { addPersistentEffect, activeEffectsAt, advanceWorldEffects, findActiveEffect } from './effects';
+export { applyPhysicalExertion, getEncumbranceProfile, scalePhysicalDuration } from './encumbrance';
 export { describeItemExamination } from './examination';
 export { applyDueInfrastructureTransitions, getMobileNetworkState, isElectricityAvailable, isMobileAvailable, isWaterAvailable, secondsUntilNextInfrastructureTransition } from './infrastructure';
 export { assertValidState, validateState } from './invariants';
@@ -15,6 +16,7 @@ export { createInitialState } from './state';
 export { formatClock } from './time';
 export { createWeatherState, ensureWeatherState, getWeatherState, normalizeWeatherCondition, setWeatherState, WEATHER_CONDITIONS } from './weather';
 export { addWorldEventSource, applyDueWorldEventTransitions, createWorldEventSource, deterministicWorldEventUnit, ensureWorldEventSimulationState, getNextWorldEventBoundary, secondsUntilNextWorldEventBoundary, setWorldEventSeed, synchronizeWorldEventSourceSchedule, WORLD_EVENT_SEED } from './world-events';
+export type { EncumbranceProfile, EncumbranceTier } from './encumbrance';
 export type { InvariantViolation } from './invariants';
 export type { LegacyMigrationResult } from './legacy-migration';
 export type { LocationEnvironmentState, LocationEnvironmentType, PlayerEnvironmentState } from './location-environment';
