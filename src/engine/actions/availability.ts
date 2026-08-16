@@ -25,9 +25,7 @@ function localPowerSources(state: GameState): ItemState[] {
 }
 
 function durationLabel(seconds: number): string {
-  if (seconds < 60) return `${seconds} s`;
-  const minutes = Math.round(seconds / 60);
-  return `${minutes} min`;
+  return seconds < 60 ? `${seconds} s` : `${Math.round(seconds / 60)} min`;
 }
 
 function carriesCrowbar(state: GameState): boolean {
@@ -47,65 +45,35 @@ export function getContextActions(state: GameState): ActionOption[] {
     }
   }
 
-  const currentLocation = state.locations[state.player.locationId];
-  const site = currentLocation?.poiSite;
+  const site = state.locations[state.player.locationId]?.poiSite;
   if (site) {
     if (site.phase === 'outside') {
-      if (!site.observed) {
-        actions.push({ id: 'OBSERVE_LOCATION', label: 'Observer les lieux', detail: 'Examiner les abords et les accès visibles. · 25 s' });
-      } else if (site.entranceLocked) {
-        const base = carriesCrowbar(state) ? Math.round(4 * 60 * 0.45) : 4 * 60;
-        const seconds = scalePhysicalDuration(state, base, 'action');
-        actions.push({
-          id: 'FORCE_POI_ACCESS',
-          label: 'Forcer l’accès',
-          detail: `${carriesCrowbar(state) ? 'Utiliser le pied-de-biche.' : 'Sans outil adapté : lent, bruyant et risqué.'} · ${durationLabel(seconds)}`,
-        });
+      if (!site.observed) actions.push({ id: 'OBSERVE_LOCATION', label: 'Observer les lieux', detail: '25 s' });
+      else if (site.entranceLocked) {
+        const crowbar = carriesCrowbar(state);
+        const seconds = scalePhysicalDuration(state, crowbar ? 108 : 240, 'action');
+        actions.push({ id: 'FORCE_POI_ACCESS', label: 'Forcer l’accès', detail: `${crowbar ? 'Pied-de-biche · ' : ''}${durationLabel(seconds)}` });
       } else {
-        const seconds = scalePhysicalDuration(state, 12, 'action');
-        actions.push({ id: 'ENTER_POI', label: 'Entrer', detail: `Découvrir ce qui est immédiatement visible. · ${durationLabel(seconds)}` });
+        actions.push({ id: 'ENTER_POI', label: 'Entrer', detail: durationLabel(scalePhysicalDuration(state, 12, 'action')) });
       }
     } else {
-      const activeZone = getActivePoiZone(site);
-      if (activeZone?.risk?.discovered && !activeZone.risk.resolved) {
-        const seconds = scalePhysicalDuration(state, activeZone.risk.secureSeconds, 'action');
-        actions.push({
-          id: 'SECURE_POI_RISK',
-          label: 'Sécuriser la zone',
-          detail: `${activeZone.risk.label}. Réduire le risque avant de fouiller. · ${durationLabel(seconds)}`,
-        });
+      const active = getActivePoiZone(site);
+      if (active?.risk?.discovered && !active.risk.resolved) {
+        actions.push({ id: 'SECURE_POI_RISK', label: 'Sécuriser la zone', detail: `${active.risk.label} · ${durationLabel(scalePhysicalDuration(state, active.risk.secureSeconds, 'action'))}` });
       }
-      if (activeZone && !activeZone.searched) {
-        const seconds = scalePhysicalDuration(state, 12 * 60, 'action');
-        actions.push({
-          id: 'SEARCH_LOCATION',
-          label: `Fouiller ${activeZone.name.toLowerCase()} méthodiquement`,
-          detail: `Inspection approfondie de cette zone. · ${durationLabel(seconds)}`,
-        });
+      if (active && !active.searched) {
+        actions.push({ id: 'SEARCH_LOCATION', label: `Fouiller ${active.name.toLowerCase()} méthodiquement`, detail: durationLabel(scalePhysicalDuration(state, 720, 'action')) });
       }
+      const crowbar = carriesCrowbar(state);
       for (const zone of poiZones(site)) {
-        if (zone.id === activeZone?.id) continue;
+        if (zone.id === active?.id) continue;
         if (zone.locked) {
-          const base = carriesCrowbar(state) ? Math.round(3 * 60 * 0.45) : 3 * 60;
-          const seconds = scalePhysicalDuration(state, base, 'action');
-          actions.push({
-            id: 'FORCE_POI_ZONE',
-            targetId: zone.id,
-            label: `Forcer l’accès vers ${zone.name.toLowerCase()}`,
-            detail: `${carriesCrowbar(state) ? 'Le pied-de-biche facilitera l’ouverture.' : 'Accès verrouillé.'} · ${durationLabel(seconds)}`,
-          });
+          actions.push({ id: 'FORCE_POI_ZONE', targetId: zone.id, label: `Forcer l’accès vers ${zone.name.toLowerCase()}`, detail: `${crowbar ? 'Pied-de-biche · ' : ''}${durationLabel(scalePhysicalDuration(state, crowbar ? 81 : 180, 'action'))}` });
         } else {
-          const seconds = scalePhysicalDuration(state, 18, 'action');
-          actions.push({
-            id: 'MOVE_POI_ZONE',
-            targetId: zone.id,
-            label: `Explorer ${zone.name.toLowerCase()}`,
-            detail: `${zone.searched ? 'Zone déjà fouillée.' : 'Changer de zone intérieure.'} · ${durationLabel(seconds)}`,
-          });
+          actions.push({ id: 'MOVE_POI_ZONE', targetId: zone.id, label: `Explorer ${zone.name.toLowerCase()}`, detail: durationLabel(scalePhysicalDuration(state, 18, 'action')) });
         }
       }
-      const leaveSeconds = scalePhysicalDuration(state, 8, 'action');
-      actions.push({ id: 'LEAVE_POI', label: 'Sortir', detail: `Revenir à l’extérieur. · ${durationLabel(leaveSeconds)}` });
+      actions.push({ id: 'LEAVE_POI', label: 'Sortir', detail: durationLabel(scalePhysicalDuration(state, 8, 'action')) });
     }
   }
 
@@ -115,23 +83,13 @@ export function getContextActions(state: GameState): ActionOption[] {
   const towel = carried.find((item) => item.definitionId === 'towel');
   const water = carried.find((item) => item.definitionId === 'water_bottle' && (item.liquidMl ?? 0) >= 250);
   for (const effect of activeEffectsAt(state, state.player.locationId)) {
-    if (effect.type === 'water_puddle' && towel) {
-      actions.push({ id: 'MOP_EFFECT', targetId: effect.id, sourceId: towel.id, label: 'Éponger l’eau', detail: 'Utiliser le torchon.' });
-    } else if (effect.type === 'smoke') {
-      actions.push({ id: 'VENTILATE_EFFECT', targetId: effect.id, label: 'Aérer la pièce', detail: 'Ouvrir pour renouveler l’air.' });
-    } else if (effect.type === 'fire' && water) {
-      actions.push({ id: 'DOUSE_EFFECT', targetId: effect.id, sourceId: water.id, label: 'Éteindre avec de l’eau', detail: 'Utiliser 250 ml.' });
-    } else if (effect.type === 'persistent_noise') {
-      actions.push({ id: 'SILENCE_EFFECT', targetId: effect.id, label: 'Couper la source du bruit', detail: 'Faire cesser le bruit continu.' });
-    }
+    if (effect.type === 'water_puddle' && towel) actions.push({ id: 'MOP_EFFECT', targetId: effect.id, sourceId: towel.id, label: 'Éponger l’eau', detail: 'Utiliser le torchon.' });
+    else if (effect.type === 'smoke') actions.push({ id: 'VENTILATE_EFFECT', targetId: effect.id, label: 'Aérer la pièce', detail: 'Ouvrir pour renouveler l’air.' });
+    else if (effect.type === 'fire' && water) actions.push({ id: 'DOUSE_EFFECT', targetId: effect.id, sourceId: water.id, label: 'Éteindre avec de l’eau', detail: 'Utiliser 250 ml.' });
+    else if (effect.type === 'persistent_noise') actions.push({ id: 'SILENCE_EFFECT', targetId: effect.id, label: 'Couper la source du bruit', detail: 'Faire cesser le bruit continu.' });
   }
-  if (state.player.locationId === 'kitchen' && state.world.leakActive) {
-    actions.push({ id: 'STOP_LEAK', label: 'Arrêter la fuite', detail: 'Couper la source d’eau.' });
-  }
-
-  if (state.player.locationId === 'bedroom' && !state.memory.shoutedForWife) {
-    actions.push({ id: 'SHOUT_FOR_WIFE', label: 'Appeler à haute voix', detail: 'Lancer un appel dans la maison et écouter.' });
-  }
+  if (state.player.locationId === 'kitchen' && state.world.leakActive) actions.push({ id: 'STOP_LEAK', label: 'Arrêter la fuite', detail: 'Couper la source d’eau.' });
+  if (state.player.locationId === 'bedroom' && !state.memory.shoutedForWife) actions.push({ id: 'SHOUT_FOR_WIFE', label: 'Appeler à haute voix', detail: 'Lancer un appel dans la maison et écouter.' });
   actions.push({ id: 'WAIT', label: 'Attendre une minute', seconds: 60 });
   return actions;
 }
@@ -162,9 +120,7 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
     const capacityMl = item.capacityMl ?? 0;
     const amount = Math.min(WATER_RULES.servingMl, liquidMl);
     if (liquidMl > 0) actions.push({ id: 'DRINK_ITEM', targetId: itemId, amountMl: amount, label: 'Boire', detail: `${amount} ml` });
-    if (inInventory && hasRunningTap(state) && capacityMl > liquidMl) {
-      actions.push({ id: 'FILL_LIQUID_CONTAINER', targetId: itemId, label: 'Remplir au robinet', detail: `${liquidMl}/${capacityMl} ml` });
-    }
+    if (inInventory && hasRunningTap(state) && capacityMl > liquidMl) actions.push({ id: 'FILL_LIQUID_CONTAINER', targetId: itemId, label: 'Remplir au robinet', detail: `${liquidMl}/${capacityMl} ml` });
   }
 
   if (!inInventory && definition?.portable !== false) actions.push({ id: 'TAKE_ITEM', targetId: itemId, label: 'Prendre' });
@@ -187,9 +143,7 @@ export function getItemActions(state: GameState, itemId: string): ActionOption[]
     if (definition?.battery?.rechargeable && (item.batteryPercent ?? definition.battery.initialChargePct) < 100 && isElectricityAvailable(state)) {
       for (const source of localPowerSources(state)) {
         const powerSource = getItemDefinition(source.definitionId)?.powerSource;
-        if (powerSource && electricity.voltagePercent >= powerSource.minimumVoltagePct) {
-          actions.push({ id: 'CHARGE_ITEM', targetId: itemId, sourceId: source.id, label: 'Recharger', detail: `Via ${source.name.toLowerCase()}.` });
-        }
+        if (powerSource && electricity.voltagePercent >= powerSource.minimumVoltagePct) actions.push({ id: 'CHARGE_ITEM', targetId: itemId, sourceId: source.id, label: 'Recharger', detail: `Via ${source.name.toLowerCase()}.` });
       }
     }
   }
