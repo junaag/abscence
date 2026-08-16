@@ -8,7 +8,8 @@
     <script>
       if (
         window.location.hostname === 'junaag.github.io' &&
-        !window.location.pathname.includes('/v020-preview/')
+        !window.location.pathname.includes('/v020-preview/') &&
+        !window.location.pathname.includes('/v020-gameplay-preview/')
       ) {
         window.location.replace('./v020-preview/');
       }
