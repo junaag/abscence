@@ -1,8 +1,8 @@
 import { assertValidState } from '../invariants';
 import type { ActionId, EngineTransition, GameAction, GameState } from '../model';
 import { openContainer } from './containers';
-import { travelToMapPoi } from './exploration';
-import { chargeItem, drinkItem, eatItem, examineItem, fillLiquidContainer, takeItem, useItem } from './items';
+import { travelToMapPoi, walkToMapPoint } from './exploration';
+import { chargeItem, drinkItem, eatItem, equipItem, examineItem, fillLiquidContainer, takeItem, unequipItem, useItem } from './items';
 import { move, openConnection } from './movement';
 import { callContact, sendSmsContact } from './phone';
 import { douseEffect, drinkTap, mopEffect, shoutForWife, silenceEffect, stopLeak, ventilateEffect, wait } from './world';
@@ -16,6 +16,7 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
   switch (id) {
     case 'MOVE': return move(state, action.targetId);
     case 'TRAVEL_TO_MAP_POI': return travelToMapPoi(state, action.targetId);
+    case 'WALK_TO_MAP_POINT': return walkToMapPoint(state, action.targetId);
     case 'OPEN_CONNECTION': return openConnection(state, action.targetId);
     case 'OPEN_CONTAINER': return openContainer(state, action.targetId);
     case 'TAKE_ITEM': return takeItem(state, action.targetId);
@@ -24,6 +25,8 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
     case 'DRINK_TAP': return drinkTap(state);
     case 'FILL_LIQUID_CONTAINER': return fillLiquidContainer(state, action.targetId);
     case 'USE_ITEM': return useItem(state, action.targetId);
+    case 'EQUIP_ITEM': return equipItem(state, action.targetId);
+    case 'UNEQUIP_ITEM': return unequipItem(state, action.targetId);
     case 'CHARGE_ITEM': return chargeItem(state, action.targetId, action.sourceId, action.seconds);
     case 'EXAMINE_ITEM': return examineItem(state, action.targetId);
     case 'CALL_CONTACT': return callContact(state, action.targetId);
