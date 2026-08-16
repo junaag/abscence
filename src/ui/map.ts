@@ -162,20 +162,10 @@ function escapeHtml(value: string): string {
 }
 
 function encodeTravelTarget(target: { id: string; name: string; lat: number; lng: number }): string {
-  return encodeURIComponent(JSON.stringify({
-    id: target.id,
-    name: target.name,
-    lat: target.lat,
-    lon: target.lng,
-  }));
+  return encodeURIComponent(JSON.stringify({ id: target.id, name: target.name, lat: target.lat, lon: target.lng }));
 }
 
-function actionButton(
-  label: string,
-  actionId: 'TRAVEL_TO_MAP_POI' | 'WALK_TO_MAP_POINT',
-  encodedTarget: string,
-  handler: (encodedTarget: string) => void,
-): HTMLButtonElement {
+function actionButton(label: string, actionId: 'TRAVEL_TO_MAP_POI' | 'WALK_TO_MAP_POINT', encodedTarget: string, handler: (encodedTarget: string) => void): HTMLButtonElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = label;
@@ -191,10 +181,9 @@ function actionButton(
 
 function poiIcon(poi: MapPoi): L.DivIcon {
   const category = escapeHtml(poi.category);
-  const symbol = poiSymbol(poi);
   return L.divIcon({
     className: `absence-poi-marker absence-poi-${poi.category.toLowerCase().replaceAll(' ', '-').replaceAll('é', 'e')}`,
-    html: `<span data-poi-category="${category}" aria-label="${escapeHtml(`${poi.category} — ${poi.typeLabel}`)}">${symbol}</span>`,
+    html: `<span data-poi-category="${category}" aria-label="${escapeHtml(`${poi.category} — ${poi.typeLabel}`)}">${poiSymbol(poi)}</span>`,
     iconSize: [40, 40],
     iconAnchor: [20, 20],
     popupAnchor: [0, -19],
@@ -204,12 +193,9 @@ function poiIcon(poi: MapPoi): L.DivIcon {
 function poiPopup(poi: MapPoi, onTravel: (encodedTarget: string) => void): HTMLElement {
   const popup = document.createElement('div');
   popup.className = 'map-popup poi-popup';
-  const category = document.createElement('strong');
-  category.textContent = poi.category;
-  const name = document.createElement('span');
-  name.textContent = poi.name;
-  const type = document.createElement('small');
-  type.textContent = poi.typeLabel;
+  const category = document.createElement('strong'); category.textContent = poi.category;
+  const name = document.createElement('span'); name.textContent = poi.name;
+  const type = document.createElement('small'); type.textContent = poi.typeLabel;
   popup.append(category, name, type, actionButton('S’y rendre', 'TRAVEL_TO_MAP_POI', encodeTravelTarget(poi), onTravel));
   return popup;
 }
@@ -217,33 +203,19 @@ function poiPopup(poi: MapPoi, onTravel: (encodedTarget: string) => void): HTMLE
 function walkPopup(point: MapCoordinate, onWalk: (encodedTarget: string) => void): HTMLElement {
   const popup = document.createElement('div');
   popup.className = 'map-popup walk-popup';
-  const title = document.createElement('strong');
-  title.textContent = 'Déplacement à pied';
-  const note = document.createElement('small');
-  note.textContent = 'Avancer progressivement dans le quartier.';
+  const title = document.createElement('strong'); title.textContent = 'Déplacement à pied';
+  const note = document.createElement('small'); note.textContent = 'Avancer progressivement dans le quartier.';
   const target = encodeTravelTarget({ id: 'walk', name: 'Rue / extérieur', lat: point.lat, lng: point.lng });
   popup.append(title, note, actionButton('Marcher ici', 'WALK_TO_MAP_POINT', target, onWalk));
   return popup;
 }
 
 function homePoi(): MapPoi {
-  return {
-    id: 'home',
-    name: 'Domicile',
-    category: 'Résidentiel',
-    typeLabel: 'Habitation',
-    lat: DEFAULT_HOME_COORDINATES.lat,
-    lng: DEFAULT_HOME_COORDINATES.lng,
-  };
+  return { id: 'home', name: 'Domicile', category: 'Résidentiel', typeLabel: 'Habitation', lat: DEFAULT_HOME_COORDINATES.lat, lng: DEFAULT_HOME_COORDINATES.lng };
 }
 
 function playerIcon(): L.DivIcon {
-  return L.divIcon({
-    className: 'absence-player-marker',
-    html: '<span aria-label="Votre position"></span>',
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
-  });
+  return L.divIcon({ className: 'absence-player-marker', html: '<span aria-label="Votre position"></span>', iconSize: [22, 22], iconAnchor: [11, 11] });
 }
 
 export interface MapController {
@@ -300,30 +272,19 @@ export function createMapController(
       return;
     }
     if (!playerMarker) {
-      playerMarker = L.marker([playerPosition.lat, playerPosition.lng], {
-        icon: playerIcon(),
-        pane: 'playerPane',
-        keyboard: false,
-        interactive: false,
-        zIndexOffset: 2000,
-      }).addTo(map);
-    } else {
-      playerMarker.setLatLng([playerPosition.lat, playerPosition.lng]);
-    }
+      playerMarker = L.marker([playerPosition.lat, playerPosition.lng], { icon: playerIcon(), pane: 'playerPane', keyboard: false, interactive: false, zIndexOffset: 2000 }).addTo(map);
+    } else playerMarker.setLatLng([playerPosition.lat, playerPosition.lng]);
   };
 
   const renderPois = (pois: readonly MapPoi[]): void => {
     if (!map || !poiLayer) return;
-    lastPois = structuredClone(pois);
+    lastPois = [...pois].map((poi) => ({ ...poi }));
     poiLayer.clearLayers();
     const home = homePoi();
-    const candidates = [
-      home,
-      ...pois.filter((poi) => poi.id !== 'home' && mapDistanceMeters(poi, home) >= 35),
-    ];
+    const candidates = [home, ...pois.filter((poi) => poi.id !== 'home' && mapDistanceMeters(poi, home) >= 35)];
     for (const poi of candidates) {
       if (!isMapPointExplored(state, poi)) continue;
-      L.marker([poi.lat, poi.lng], { icon: poiIcon(poi), pane: 'poiPane', keyboard: true, title: poi.name })
+      L.marker([poi.lat, poi.lng], { icon: poiIcon(poi), pane: 'poiPane', keyboard: true, title: poi.name, bubblingMouseEvents: false })
         .bindPopup(poiPopup(poi, onTravel))
         .addTo(poiLayer);
     }
@@ -360,10 +321,7 @@ export function createMapController(
     }
     const key = mapPoiCacheKey(centerPoint);
     const cached = poiCache.get(key);
-    if (cached) {
-      renderPois(cached);
-      return;
-    }
+    if (cached) { renderPois(cached); return; }
 
     poiAbort?.abort();
     const controller = new AbortController();
@@ -392,21 +350,12 @@ export function createMapController(
     if (map) return;
     map = L.map(host, { zoomControl: false, preferCanvas: true, minZoom: 3, maxZoom: 20 }).setView([state.center.lat, state.center.lng], state.zoom);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 20,
-      attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-      updateWhenIdle: true,
-      keepBuffer: 2,
+      subdomains: 'abcd', maxZoom: 20, attribution: '&copy; OpenStreetMap contributors &copy; CARTO', updateWhenIdle: true, keepBuffer: 2,
     }).addTo(map);
     L.control.zoom({ position: 'topright' }).addTo(map);
-    const fogPane = map.createPane('fogPane');
-    fogPane.style.zIndex = '430';
-    fogPane.style.pointerEvents = 'none';
-    const poiPane = map.createPane('poiPane');
-    poiPane.style.zIndex = '650';
-    const playerPane = map.createPane('playerPane');
-    playerPane.style.zIndex = '700';
-    playerPane.style.pointerEvents = 'none';
+    const fogPane = map.createPane('fogPane'); fogPane.style.zIndex = '430'; fogPane.style.pointerEvents = 'none';
+    const poiPane = map.createPane('poiPane'); poiPane.style.zIndex = '650';
+    const playerPane = map.createPane('playerPane'); playerPane.style.zIndex = '700'; playerPane.style.pointerEvents = 'none';
     fog = new FogCanvasLayer(state.explored, state.exploredCorridors).addTo(map);
     poiLayer = L.layerGroup().addTo(map);
     renderPois([]);
@@ -414,10 +363,7 @@ export function createMapController(
 
     map.on('click', (event) => {
       const point = { lat: event.latlng.lat, lng: event.latlng.lng };
-      L.popup({ closeButton: true, autoPan: true })
-        .setLatLng(event.latlng)
-        .setContent(walkPopup(point, onWalk))
-        .openOn(map!);
+      L.popup({ closeButton: true, autoPan: true }).setLatLng(event.latlng).setContent(walkPopup(point, onWalk)).openOn(map!);
     });
     map.on('movestart zoomstart', startInteraction);
     map.on('moveend zoomend', endInteraction);
@@ -432,16 +378,9 @@ export function createMapController(
       fog?.setExploration(state.explored, state.exploredCorridors);
       renderPois(lastPois);
       renderPlayer();
-      window.requestAnimationFrame(() => {
-        map?.invalidateSize({ animate: false });
-        schedulePoiLoad();
-      });
+      window.requestAnimationFrame(() => { map?.invalidateSize({ animate: false }); schedulePoiLoad(); });
     },
-    detach(): void {
-      clearPoiRequest();
-      host.remove();
-      document.body.classList.remove('map-moving');
-    },
+    detach(): void { clearPoiRequest(); host.remove(); document.body.classList.remove('map-moving'); },
     sync(nextState, nextPlayerPosition): void {
       state = normalizeMapUiState(nextState);
       if (nextPlayerPosition !== undefined) playerPosition = nextPlayerPosition ? { ...nextPlayerPosition } : null;
@@ -451,19 +390,12 @@ export function createMapController(
       if (map) map.setView([state.center.lat, state.center.lng], state.zoom, { animate: false });
       schedulePoiLoad();
     },
-    getState(): MapUiState {
-      return structuredClone(state);
-    },
+    getState(): MapUiState { return structuredClone(state); },
     destroy(): void {
       clearPoiRequest();
       if (hideTimer !== null) window.clearTimeout(hideTimer);
       document.body.classList.remove('map-moving');
-      map?.remove();
-      map = null;
-      fog = null;
-      poiLayer = null;
-      playerMarker = null;
-      host.remove();
+      map?.remove(); map = null; fog = null; poiLayer = null; playerMarker = null; host.remove();
     },
   };
 }
