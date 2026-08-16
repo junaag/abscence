@@ -1,4 +1,8 @@
-import type { PoiRiskKind, PoiRiskState, PoiSiteCategory, PoiSiteState, PoiZoneState } from './model';
+import type { PoiRiskKind, PoiSiteCategory, PoiSiteState, PoiZoneState } from './model';
+
+type RawRisk = [PoiRiskKind, string, string, number, number, number, number];
+type RawZone = [string, string, boolean, string[], string[], RawRisk?, string?];
+type Blueprint = [boolean, RawZone[]];
 
 const GENERIC: PoiZoneState[] = [
   { id: 'main', name: 'Zone principale', locked: false, discovered: true, surfaceRevealed: false, searched: false, surfaceLootIds: ['water_bottle'], deepLootIds: ['flashlight', 'canned_food', 'towel'] },
@@ -19,53 +23,36 @@ export function normalizePoiCategory(value: string | undefined): PoiSiteCategory
     || value === 'Services publics' || value === 'Résidentiel' ? value : 'Inconnu';
 }
 
-function string(value: unknown): string { return typeof value === 'string' ? value.trim() : ''; }
-function list(value: unknown): string[] { return Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string').slice(0, 8) : []; }
-
-function risk(sourceId: string, zoneId: string, raw: unknown): PoiRiskState | undefined {
-  if (!Array.isArray(raw)) return undefined;
-  const kind = string(raw[0]) as PoiRiskKind;
-  if (!['debris', 'unstable_storage', 'chemical', 'electrical', 'darkness'].includes(kind)) return undefined;
-  const label = string(raw[1]);
-  const description = string(raw[2]);
-  if (!label || !description) return undefined;
-  const n = (index: number, fallback = 0): number => Number.isFinite(Number(raw[index])) ? Number(raw[index]) : fallback;
-  return {
-    id: `${zoneId}_${kind}_${stablePoiHash(`${sourceId}:${zoneId}:risk`).toString(16)}`,
-    kind, label, description, discovered: false, resolved: false, triggered: false,
-    secureSeconds: Math.max(1, Math.round(n(3, 120))), painPenalty: Math.max(0, n(4)),
-    fatiguePenalty: Math.max(0, n(5)), stressPenalty: Math.max(0, n(6)),
-  };
-}
-
-function decode(sourceId: string, blueprint: unknown): { entranceLocked: boolean; zones: PoiZoneState[] } | null {
-  if (!Array.isArray(blueprint) || !Array.isArray(blueprint[1])) return null;
-  const zones: PoiZoneState[] = [];
-  for (const [index, raw] of blueprint[1].slice(0, 5).entries()) {
-    if (!Array.isArray(raw)) continue;
-    const id = string(raw[0]);
-    const name = string(raw[1]);
-    if (!id || !name || zones.some((z) => z.id === id)) continue;
-    const localRisk = risk(sourceId, id, raw[5]);
-    const clueText = string(raw[6]);
-    zones.push({
-      id, name, locked: raw[2] === true, discovered: index === 0, surfaceRevealed: false, searched: false,
-      surfaceLootIds: list(raw[3]), deepLootIds: list(raw[4]),
-      ...(localRisk ? { risk: localRisk } : {}),
-      ...(clueText ? { clue: { id: `${id}_clue_${stablePoiHash(`${sourceId}:${id}:clue`).toString(16)}`, text: clueText, discovered: false } } : {}),
-    });
-  }
-  return zones.length ? { entranceLocked: blueprint[0] === true, zones } : null;
-}
-
 function genericZones(): PoiZoneState[] { return structuredClone(GENERIC); }
 
+function decode(sourceId: string, value: unknown): PoiZoneState[] | null {
+  if (!Array.isArray(value) || !Array.isArray(value[1])) return null;
+  const rows = (value as Blueprint)[1].slice(0, 5);
+  const zones = rows.map((row, index): PoiZoneState | null => {
+    if (!Array.isArray(row) || typeof row[0] !== 'string' || typeof row[1] !== 'string') return null;
+    const [id, name, locked, surface = [], deep = [], rawRisk, clue] = row;
+    const risk = Array.isArray(rawRisk) ? {
+      id: `${id}_${rawRisk[0]}_${stablePoiHash(`${sourceId}:${id}:risk`).toString(16)}`,
+      kind: rawRisk[0], label: rawRisk[1], description: rawRisk[2], discovered: false, resolved: false, triggered: false,
+      secureSeconds: rawRisk[3], painPenalty: rawRisk[4], fatiguePenalty: rawRisk[5], stressPenalty: rawRisk[6],
+    } : undefined;
+    return {
+      id: id.slice(0, 60), name: name.slice(0, 100), locked: locked === true, discovered: index === 0,
+      surfaceRevealed: false, searched: false,
+      surfaceLootIds: Array.isArray(surface) ? surface.slice(0, 8) : [], deepLootIds: Array.isArray(deep) ? deep.slice(0, 8) : [],
+      ...(risk ? { risk } : {}),
+      ...(typeof clue === 'string' && clue ? { clue: { id: `${id}_clue_${stablePoiHash(`${sourceId}:${id}:clue`).toString(16)}`, text: clue.slice(0, 320), discovered: false } } : {}),
+    };
+  }).filter((zone): zone is PoiZoneState => zone !== null);
+  return zones.length ? zones : null;
+}
+
 export function createPoiSiteState(sourceId: string, categoryValue?: string, typeLabel?: string, blueprint?: unknown): PoiSiteState {
-  const parsed = decode(sourceId, blueprint);
+  const zones = decode(sourceId, blueprint);
   return {
-    sourceId, category: normalizePoiCategory(categoryValue), ...(typeLabel ? { typeLabel } : {}),
-    phase: 'outside', observed: false, entranceLocked: parsed?.entranceLocked ?? false,
-    entranceForced: false, surfaceRevealed: false, searched: false, zones: parsed?.zones ?? genericZones(),
+    sourceId, category: normalizePoiCategory(categoryValue), ...(typeLabel ? { typeLabel } : {}), phase: 'outside', observed: false,
+    entranceLocked: Array.isArray(blueprint) && blueprint[0] === true, entranceForced: false, surfaceRevealed: false,
+    searched: false, zones: zones ?? genericZones(),
   };
 }
 
