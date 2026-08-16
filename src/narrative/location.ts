@@ -27,6 +27,37 @@ function persistentSilence(state: GameState): string {
   return ' Le temps passe. Ce silence n’a plus rien d’un simple hasard : aucune présence humaine ne s’est manifestée depuis votre réveil.';
 }
 
+function hasTriedFamilyContact(state: GameState): boolean {
+  return state.phone.calls.some((call) => call.id.startsWith('attempt_call_'))
+    || state.phone.messages.some((message) => message.id.startsWith('attempt_sms_'));
+}
+
+export function describeImmediateConcern(state: GameState): string {
+  const active = state.world.effects.filter((effect) => effect.active);
+  const fire = active.find((effect) => effect.type === 'fire');
+  if (fire) return 'Un départ de feu est désormais prioritaire. Le comprendre ou l’éteindre compte davantage que poursuivre l’exploration.';
+
+  const smoke = active.find((effect) => effect.type === 'smoke');
+  if (smoke) return 'De la fumée est apparue. Il faut décider si vous intervenez immédiatement ou si vous vous éloignez du danger.';
+
+  if (state.world.leakActive) return 'Une fuite d’eau est active dans la maison. La laisser courir risque de transformer un problème mineur en dégât durable.';
+
+  const noise = active.find((effect) => effect.type === 'persistent_noise');
+  if (noise) return 'Un bruit persistant rompt le silence. C’est peut-être seulement une machine laissée en marche — ou le premier indice d’une activité extérieure.';
+
+  if (!state.memory.shoutedForWife) return 'La maison semble vide, mais vous n’avez encore appelé personne à haute voix. Une réponse, même faible, changerait immédiatement la situation.';
+
+  if (!hasTriedFamilyContact(state)) return 'Personne n’a répondu dans la maison. Votre téléphone fonctionne encore : tenter de joindre votre famille est le moyen le plus rapide de savoir si l’absence dépasse votre foyer.';
+
+  if (!state.memory.visitedLocationIds.includes('garden')) return 'Aucun proche ne répond. Avant de partir loin, regarder dehors depuis le jardin permettrait de vérifier si le quartier vit encore normalement.';
+
+  if (!state.memory.visitedLocationIds.includes('street')) return 'Le jardin est silencieux lui aussi. La prochaine vérification naturelle est la rue : rester dans la maison ou franchir le portail devient un vrai choix.';
+
+  if (state.engine.elapsedSeconds >= 20 * 60) return 'Vous n’avez toujours vu personne. Il faut maintenant arbitrer entre sécuriser les ressources de la maison et élargir la recherche dans le quartier.';
+
+  return 'La rue confirme que quelque chose dépasse votre maison. Observer, conserver vos ressources et choisir jusqu’où vous éloigner devient essentiel.';
+}
+
 export function describeCurrentLocation(state: GameState): string {
   const location = currentLocation(state);
   const items = visibleNames(looseItemsAtCurrentLocation(state));
