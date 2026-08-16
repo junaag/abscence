@@ -20,6 +20,13 @@ function describeEffect(effect: PersistentEffect): string {
   return effect.intensity >= 35 ? 'Un bruit continu finit par devenir difficile à ignorer.' : 'Un bruit de fond persistant reste perceptible.';
 }
 
+function persistentSilence(state: GameState): string {
+  const minutes = Math.floor(state.engine.elapsedSeconds / 60);
+  if (minutes < 10) return '';
+  if (minutes < 20) return ' Plusieurs minutes ont passé et personne n’a encore répondu, appelé ou traversé la rue.';
+  return ' Le temps passe. Ce silence n’a plus rien d’un simple hasard : aucune présence humaine ne s’est manifestée depuis votre réveil.';
+}
+
 export function describeCurrentLocation(state: GameState): string {
   const location = currentLocation(state);
   const items = visibleNames(looseItemsAtCurrentLocation(state));
@@ -27,19 +34,24 @@ export function describeCurrentLocation(state: GameState): string {
   let base: string;
 
   if (location.id === 'bedroom') {
-    const first = 'La place à côté de vous est vide. Aucun bruit de circulation ne traverse la maison.';
-    base = state.memory.shoutedForWife ? `${first} Vous avez appelé votre épouse, sans obtenir la moindre réponse.` : `${first} Le silence est suffisamment inhabituel pour attirer votre attention.`;
+    const first = 'La place à côté de vous est vide. Les draps sont froids, comme si personne ne s’y était allongé depuis un moment. Derrière les volets, aucun moteur, aucune voix, aucun bruit de voisinage.';
+    base = state.memory.shoutedForWife
+      ? `${first} Vous avez appelé votre épouse. Votre voix a traversé la maison, puis le silence est revenu exactement comme avant.`
+      : `${first} Votre téléphone est là, mais rien dans la pièce n’explique cette absence.`;
   } else if (location.id === 'kitchen') {
     const parts: string[] = [];
-    parts.push(isElectricityAvailable(state) ? 'Le réfrigérateur ronronne encore.' : 'Le réfrigérateur est silencieux : le courant est coupé.');
-    parts.push(items.length > 0 ? `À portée de main : ${joinFrench(items)}.` : 'Le plan de travail est presque vide.');
-    parts.push(isWaterAvailable(state) ? 'Le robinet fonctionne encore.' : 'Lorsque vous ouvrez le robinet, rien ne coule.');
+    parts.push(isElectricityAvailable(state) ? 'Le ronronnement du réfrigérateur paraît presque trop présent dans cette maison silencieuse.' : 'Le réfrigérateur s’est tu : le courant est coupé.');
+    parts.push(items.length > 0 ? `Sur le plan de travail et autour de vous : ${joinFrench(items)}.` : 'Le plan de travail ne vous donne aucun indice immédiat.');
+    parts.push(isWaterAvailable(state) ? 'L’eau coule encore au robinet, signe que les réseaux n’ont pas encore totalement cessé de fonctionner.' : 'Le robinet ne donne plus rien. Le réseau d’eau a déjà cessé de fonctionner.');
     base = parts.join(' ');
   } else if (location.id === 'garden') {
-    base = 'Le jardin est calme. Aucun mouvement humain, aucune voix, aucun moteur au loin.';
+    base = 'L’air extérieur confirme ce que la maison laissait craindre. Le jardin est immobile ; aucune conversation voisine, aucune portière, aucun moteur. Au-delà de la clôture, la rue semble anormalement vide.';
+  } else if (location.id === 'street') {
+    base = 'Vous franchissez réellement la limite de la maison. La rue est là, familière dans ses formes et pourtant méconnaissable : des véhicules sont stationnés, mais rien ne circule. Aucun piéton, aucun voisin, aucune voix aux fenêtres. Pour la première fois, l’hypothèse que le problème dépasse votre foyer devient difficile à écarter.';
   } else {
     base = `Vous vous trouvez dans ${location.name.toLowerCase()}.`;
   }
 
-  return effectText ? `${base} ${effectText}` : base;
+  const silence = persistentSilence(state);
+  return effectText ? `${base}${silence} ${effectText}` : `${base}${silence}`;
 }
