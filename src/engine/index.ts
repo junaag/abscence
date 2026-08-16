@@ -8,7 +8,7 @@ export { ensureLocationEnvironmentState, getLocationEnvironment, getLocationTemp
 export { assertValidLocationEnvironmentState, validateLocationEnvironmentState } from './location-environment-validation';
 export { loadState, saveState, SAVE_KEY } from './persistence';
 export { getDistanceMeters, getPerceivedWorldEvents, getWorldEventPerception } from './perception';
-export { getPhoneCapabilities, phoneCalls, phoneDeviceItemId, phoneMessages } from './phone';
+export { getPhoneCapabilities, phoneCalls, phoneContacts, phoneDeviceItemId, phoneMessages } from './phone';
 export { environmentPhysiologyModifiers, effectivePhysiologyRates } from './physiology';
 export { connectedDestinations, containerContents, containersAtCurrentLocation, currentLocation, inventoryItems, looseItemsAtCurrentLocation } from './selectors';
 export { createInitialState } from './state';
@@ -20,7 +20,7 @@ export type { LegacyMigrationResult } from './legacy-migration';
 export type { LocationEnvironmentState, LocationEnvironmentType, PlayerEnvironmentState } from './location-environment';
 export type { LocationEnvironmentViolation } from './location-environment-validation';
 export type { PerceptionChannel, PerceptionChannelId, WorldEventPerception } from './perception';
-export type { PhoneCapabilities } from './phone';
+export type { PhoneCapabilities, PhoneContactOption } from './phone';
 export type { WeatherCondition, WeatherState } from './weather';
 export type { WorldEventBoundary } from './world-events';
 export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType, PhoneCallRecord, PhoneMessageRecord, PhoneState, ProceduralWorldEventTransition, SensoryProfile, WorldEventDefinitionId, WorldEventSourceState, WorldEventState, WorldPosition } from './model';
