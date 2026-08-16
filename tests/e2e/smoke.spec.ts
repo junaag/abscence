@@ -121,7 +121,7 @@ test('map mounts Leaflet with textured fog and preserves one map host across nav
 
   await page.locator('.absence-home-marker').click();
   await expect(page.getByRole('button', { name: 'Revenir à la maison' })).toBeVisible();
-  await page.getByRole('button', { name: 'Revenir à la maison' }).click();
+  await page.locator('nav').getByRole('button', { name: /Accueil/ }).click();
   await expect(page.getByTestId('home-view')).toBeVisible();
 
   await page.getByRole('button', { name: /Carte/ }).click();
