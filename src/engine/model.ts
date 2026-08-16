@@ -54,6 +54,7 @@ export interface PoiSiteState {
   sourceId: string;
   phase: PoiSitePhase;
   observed: boolean;
+  surfaceRevealed?: boolean;
   searched: boolean;
 }
 
