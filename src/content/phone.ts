@@ -1,5 +1,11 @@
 import type { PhoneState } from '../engine/model';
 
+export const PHONE_CONTACTS = [
+  { id: 'wife', name: 'Épouse' },
+  { id: 'alice', name: 'Alice' },
+  { id: 'lilou', name: 'Lilou' },
+] as const;
+
 const INITIAL_PHONE_STATE: PhoneState = {
   deviceItemId: 'phone_01',
   calls: [
