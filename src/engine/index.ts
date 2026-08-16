@@ -10,7 +10,7 @@ export { loadState, saveState, SAVE_KEY } from './persistence';
 export { getDistanceMeters, getPerceivedWorldEvents, getWorldEventPerception } from './perception';
 export { getPhoneCapabilities, phoneCalls, phoneContacts, phoneDeviceItemId, phoneMessages } from './phone';
 export { environmentPhysiologyModifiers, effectivePhysiologyRates } from './physiology';
-export { connectedDestinations, containerContents, containersAtCurrentLocation, currentLocation, inventoryItems, looseItemsAtCurrentLocation } from './selectors';
+export { canCarryItem, connectedDestinations, containerContents, containersAtCurrentLocation, currentLocation, equipmentState, getCarryCapacity, getCarryLoad, inventoryItems, isItemEquipped, looseItemsAtCurrentLocation } from './selectors';
 export { createInitialState } from './state';
 export { formatClock } from './time';
 export { createWeatherState, ensureWeatherState, getWeatherState, normalizeWeatherCondition, setWeatherState, WEATHER_CONDITIONS } from './weather';
@@ -23,4 +23,4 @@ export type { PerceptionChannel, PerceptionChannelId, WorldEventPerception } fro
 export type { PhoneCapabilities, PhoneContactOption } from './phone';
 export type { WeatherCondition, WeatherState } from './weather';
 export type { WorldEventBoundary } from './world-events';
-export type { ActionOption, ActionResult, ContainerState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType, PhoneCallRecord, PhoneMessageRecord, PhoneState, ProceduralWorldEventTransition, SensoryProfile, WorldEventDefinitionId, WorldEventSourceState, WorldEventState, WorldPosition } from './model';
+export type { ActionOption, ActionResult, ContainerState, EquipmentState, GameAction, GameState, ItemState, InfrastructureTransitionState, PersistentEffect, PersistentEffectType, PhoneCallRecord, PhoneMessageRecord, PhoneState, ProceduralWorldEventTransition, SensoryProfile, WorldEventDefinitionId, WorldEventSourceState, WorldEventState, WorldPosition } from './model';
