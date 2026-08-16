@@ -1,4 +1,5 @@
 import { assertValidState } from '../invariants';
+import { unlockTarget } from '../locks';
 import type { ActionId, EngineTransition, GameAction, GameState } from '../model';
 import { openContainer } from './containers';
 import { chargeItem, drinkItem, eatItem, examineItem, fillLiquidContainer, takeItem, useItem } from './items';
@@ -15,6 +16,7 @@ function dispatch(state: GameState, action: GameAction): EngineTransition {
     case 'MOVE': return move(state, action.targetId);
     case 'OPEN_CONNECTION': return openConnection(state, action.targetId);
     case 'OPEN_CONTAINER': return openContainer(state, action.targetId);
+    case 'UNLOCK_TARGET': return unlockTarget(state, action.targetId, action.sourceId);
     case 'TAKE_ITEM': return takeItem(state, action.targetId);
     case 'EAT_ITEM': return eatItem(state, action.targetId);
     case 'DRINK_ITEM': return drinkItem(state, action.targetId, action.amountMl);
