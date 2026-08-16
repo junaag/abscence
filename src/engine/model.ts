@@ -13,11 +13,18 @@ export interface NeedsState {
   pain: number;
 }
 
+export interface EquipmentState {
+  back: ItemId | null;
+  waist: ItemId | null;
+}
+
 export interface PlayerState {
   locationId: LocationId;
   healthPv: number;
   needs: NeedsState;
   inventoryIds: ItemId[];
+  baseCarryCapacity?: number;
+  equipment?: EquipmentState;
   alive: boolean;
 }
 
@@ -239,6 +246,7 @@ export interface PhoneState {
 export interface MemoryState {
   shoutedForWife: boolean;
   visitedLocationIds: LocationId[];
+  locationVisitCounts?: Record<LocationId, number>;
 }
 
 export interface GameState {
@@ -260,6 +268,7 @@ export interface GameState {
 export type ActionId =
   | 'MOVE'
   | 'TRAVEL_TO_MAP_POI'
+  | 'WALK_TO_MAP_POINT'
   | 'OPEN_CONNECTION'
   | 'OPEN_CONTAINER'
   | 'TAKE_ITEM'
@@ -268,6 +277,8 @@ export type ActionId =
   | 'DRINK_TAP'
   | 'FILL_LIQUID_CONTAINER'
   | 'USE_ITEM'
+  | 'EQUIP_ITEM'
+  | 'UNEQUIP_ITEM'
   | 'CHARGE_ITEM'
   | 'EXAMINE_ITEM'
   | 'CALL_CONTACT'
