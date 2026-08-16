@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { performAction } from '../../src/engine/actions';
+import { getContextActions, performAction } from '../../src/engine/actions';
 import { createInitialState } from '../../src/engine/state';
 
 function target(id: string, name: string, lat: number, lon: number): string {
@@ -10,6 +10,12 @@ function reachGarden() {
   let state = createInitialState();
   state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
   state = performAction(state, { id: 'MOVE', targetId: 'garden' }).state;
+  return state;
+}
+
+function reachPoi() {
+  let state = reachGarden();
+  state = performAction(state, { id: 'TRAVEL_TO_MAP_POI', targetId: target('node:1', 'Station Ingres', 43.4055, 5.0549) }).state;
   return state;
 }
 
@@ -32,7 +38,59 @@ describe('map travel', () => {
     const location = transition.state.locations[transition.state.player.locationId];
     expect(location?.name).toBe('Station Ingres');
     expect(location?.position).toEqual({ lat: 43.4055, lon: 5.0549 });
+    expect(location?.poiSite).toEqual({ sourceId: 'node:1', phase: 'outside', observed: false, searched: false });
     expect(transition.state.memory.visitedLocationIds).toContain(location?.id);
+  });
+
+  it('exposes observe then enter then search then leave without quest guidance', () => {
+    let state = reachPoi();
+    expect(getContextActions(state).map((action) => action.id)).toContain('OBSERVE_LOCATION');
+    expect(getContextActions(state).map((action) => action.id)).not.toContain('SEARCH_LOCATION');
+
+    state = performAction(state, { id: 'OBSERVE_LOCATION' }).state;
+    expect(state.locations[state.player.locationId]?.poiSite?.observed).toBe(true);
+    expect(getContextActions(state).map((action) => action.id)).toContain('ENTER_POI');
+
+    state = performAction(state, { id: 'ENTER_POI' }).state;
+    expect(state.locations[state.player.locationId]?.poiSite?.phase).toBe('inside');
+    expect(getContextActions(state).map((action) => action.id)).toContain('SEARCH_LOCATION');
+    expect(getContextActions(state).map((action) => action.id)).toContain('LEAVE_POI');
+
+    const beforeSearch = state.engine.elapsedSeconds;
+    const search = performAction(state, { id: 'SEARCH_LOCATION' });
+    expect(search.result.success).toBe(true);
+    expect(search.result.elapsedSeconds).toBe(180);
+    expect(search.state.engine.elapsedSeconds).toBe(beforeSearch + 180);
+    expect(search.state.locations[search.state.player.locationId]?.poiSite?.searched).toBe(true);
+    const foundItems = Object.values(search.state.items).filter((item) => item.location.kind === 'location' && item.location.id === search.state.player.locationId);
+    expect(foundItems).toHaveLength(2);
+    expect(search.result.body).toContain(foundItems[0]?.name.toLowerCase() ?? '');
+
+    state = performAction(search.state, { id: 'LEAVE_POI' }).state;
+    expect(state.locations[state.player.locationId]?.poiSite?.phase).toBe('outside');
+  });
+
+  it('does not allow repeated searches to duplicate resources', () => {
+    let state = reachPoi();
+    state = performAction(state, { id: 'OBSERVE_LOCATION' }).state;
+    state = performAction(state, { id: 'ENTER_POI' }).state;
+    state = performAction(state, { id: 'SEARCH_LOCATION' }).state;
+    const itemCount = Object.keys(state.items).length;
+    const retry = performAction(state, { id: 'SEARCH_LOCATION' });
+    expect(retry.result.success).toBe(false);
+    expect(retry.state).toBe(state);
+    expect(Object.keys(retry.state.items)).toHaveLength(itemCount);
+    expect(retry.result.title).toBe('Déjà fouillé');
+  });
+
+  it('requires leaving an interior before using map travel again', () => {
+    let state = reachPoi();
+    state = performAction(state, { id: 'OBSERVE_LOCATION' }).state;
+    state = performAction(state, { id: 'ENTER_POI' }).state;
+    const transition = performAction(state, { id: 'TRAVEL_TO_MAP_POI', targetId: target('node:2', 'Garage du Sud', 43.4057, 5.0551) });
+    expect(transition.result.success).toBe(false);
+    expect(transition.state).toBe(state);
+    expect(transition.result.title).toBe('Vous êtes à l’intérieur');
   });
 
   it('allows short progressive walking steps through the street network view', () => {
