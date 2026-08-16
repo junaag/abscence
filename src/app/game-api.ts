@@ -14,11 +14,13 @@ export {
   getContextActions,
   getItemActions,
   getMobileNetworkState,
+  getPhoneCapabilities,
   getWeatherState,
   inventoryItems,
   looseItemsAtCurrentLocation,
   performAction,
   phoneCalls,
+  phoneContacts,
   phoneDeviceItemId,
   phoneMessages,
 } from '../engine';
@@ -28,5 +30,6 @@ export type {
   ActionResult,
   GameAction,
   GameState,
+  PhoneContactOption,
   WeatherCondition,
 } from '../engine';
