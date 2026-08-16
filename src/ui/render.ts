@@ -1,6 +1,18 @@
-import type { MapUiState } from '../app/map-state';
+import {
+  addExploredMapArea,
+  addExploredMapCorridor,
+  DEFAULT_HOME_COORDINATES,
+  type MapCoordinate,
+  type MapUiState,
+} from '../app/map-state';
 import type { UiPreferences } from '../app/preferences';
-import { performAction, type GameAction, type GameState } from '../app/game-api';
+import {
+  currentLocation,
+  performAction,
+  phoneDeviceItemId,
+  type GameAction,
+  type GameState,
+} from '../app/game-api';
 import type { MapController } from './map';
 import { menuOverlay, type MenuPanel } from './menu';
 import { renderPersistenceWarning } from './persistence-warning';
@@ -38,6 +50,13 @@ function viewMarkup(state: GameState, ui: UiState): string {
   }
 }
 
+function locationMapCoordinate(state: GameState): MapCoordinate | null {
+  const position = currentLocation(state).position;
+  if (!position || !('lat' in position) || !('lon' in position)) return null;
+  if (!Number.isFinite(position.lat) || !Number.isFinite(position.lon)) return null;
+  return { lat: position.lat, lng: position.lon };
+}
+
 export function mountApp(root: HTMLElement, initialState: GameState, options: MountOptions): void {
   let state = initialState;
   let ui: UiState = {
@@ -49,14 +68,17 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
   let menuPanel: MenuPanel = null;
   let preferences: UiPreferences = { ...options.preferences };
   let persistenceWarning = Boolean(options.initialPersistenceWarning);
+  let mapState: MapUiState = structuredClone(options.mapState);
   let mapController: MapController | null = null;
   let mapControllerPromise: Promise<MapController> | null = null;
+  let popupContainerContextId: string | undefined;
 
   const markPersistenceFailure = (success: boolean): void => {
     if (!success) persistenceWarning = true;
   };
 
-  const persistMapState = (mapState: MapUiState): void => {
+  const persistMapState = (nextMapState: MapUiState): void => {
+    mapState = structuredClone(nextMapState);
     markPersistenceFailure(options.persistMapState(mapState));
     if (persistenceWarning) render();
   };
@@ -65,7 +87,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     if (mapController) return Promise.resolve(mapController);
     if (!mapControllerPromise) {
       mapControllerPromise = import('./map').then(({ createMapController }) => {
-        const controller = createMapController(options.mapState, persistMapState);
+        const controller = createMapController(mapState, persistMapState);
         mapController = controller;
         return controller;
       });
@@ -102,11 +124,46 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     else mapController?.detach();
   }
 
+  const revealMovementOnMap = (previousState: GameState): void => {
+    const destination = locationMapCoordinate(state);
+    if (!destination) return;
+    const origin = locationMapCoordinate(previousState) ?? { ...DEFAULT_HOME_COORDINATES };
+
+    let nextMapState = addExploredMapArea(mapState, { ...destination, radiusM: 28 });
+    const moved = Math.abs(origin.lat - destination.lat) > 0.000001 || Math.abs(origin.lng - destination.lng) > 0.000001;
+    if (moved) nextMapState = addExploredMapCorridor(nextMapState, { points: [origin, destination], radiusM: 12 });
+    persistMapState(nextMapState);
+    mapController?.sync(mapState);
+  };
+
+  const closePopupContext = (): void => {
+    const targetContainerId = ui.popupTarget?.kind === 'container' ? ui.popupTarget.id : popupContainerContextId;
+    if (targetContainerId && state.containers[targetContainerId]?.open) {
+      const transition = performAction(state, { id: 'OPEN_CONTAINER', targetId: targetContainerId });
+      if (transition.result.success) {
+        state = transition.state;
+        markPersistenceFailure(options.persist(state));
+      }
+    }
+    popupContainerContextId = undefined;
+    ui.popupTarget = undefined;
+  };
+
   const execute = (action: GameAction): void => {
+    const previousState = state;
     const transition = performAction(state, action);
     state = transition.state;
     ui.result = transition.result;
     markPersistenceFailure(options.persist(state));
+
+    if (transition.result.success && action.id === 'MOVE') revealMovementOnMap(previousState);
+
+    if (transition.result.success && action.id === 'USE_ITEM' && action.targetId === phoneDeviceItemId(state)) {
+      ui.view = 'phone';
+      ui.phoneTab = 'home';
+      ui.popupTarget = undefined;
+      popupContainerContextId = undefined;
+    }
     render();
   };
 
@@ -117,6 +174,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
 
     const navId = button.dataset.nav as ViewId | undefined;
     if (navId) {
+      closePopupContext();
       ui = { view: navId, phoneTab: ui.phoneTab, popupTarget: undefined, result: ui.result };
       menuPanel = null;
       render();
@@ -124,6 +182,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     }
 
     if (button.dataset.mapReturnHome !== undefined) {
+      closePopupContext();
       ui = { view: 'home', phoneTab: ui.phoneTab, popupTarget: undefined, result: ui.result };
       render();
       return;
@@ -142,6 +201,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
       return;
     }
     if (button.dataset.menuHome !== undefined) {
+      closePopupContext();
       ui = { view: 'home', phoneTab: ui.phoneTab, popupTarget: undefined, result: ui.result };
       menuPanel = null;
       render();
@@ -170,17 +230,22 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     }
 
     if (button.dataset.closePopup !== undefined) {
-      ui.popupTarget = undefined;
+      closePopupContext();
       menuPanel = null;
       render();
       return;
     }
     if (button.dataset.openItem) {
+      const item = state.items[button.dataset.openItem];
+      if (ui.popupTarget?.kind === 'container') popupContainerContextId = ui.popupTarget.id;
+      else if (item?.location.kind === 'container' && state.containers[item.location.id]?.open) popupContainerContextId = item.location.id;
+      else popupContainerContextId = undefined;
       ui.popupTarget = { kind: 'item', id: button.dataset.openItem };
       render();
       return;
     }
     if (button.dataset.openContainer) {
+      popupContainerContextId = button.dataset.openContainer;
       ui.popupTarget = { kind: 'container', id: button.dataset.openContainer };
       render();
       return;
