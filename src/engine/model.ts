@@ -269,6 +269,8 @@ export type ActionId =
   | 'USE_ITEM'
   | 'CHARGE_ITEM'
   | 'EXAMINE_ITEM'
+  | 'CALL_CONTACT'
+  | 'SEND_SMS_CONTACT'
   | 'MOP_EFFECT'
   | 'VENTILATE_EFFECT'
   | 'DOUSE_EFFECT'
