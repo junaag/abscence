@@ -39,6 +39,7 @@ test('nearby OSM POIs load with the balanced categories and remain above the fog
   await expect(popup).toContainText('Station service');
   await expect(popup.getByRole('button', { name: 'S’y rendre' })).toBeVisible();
 
+  await page.locator('.leaflet-popup-close-button').click();
   await page.locator('.leaflet-marker-icon[title="Pharmacie du quartier"]').click();
   await expect(page.locator('.leaflet-popup-content')).toContainText('Santé');
   await expect(page.locator('.leaflet-popup-content')).toContainText('Pharmacie');
