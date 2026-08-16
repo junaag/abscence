@@ -23,27 +23,41 @@ export function takeItem(state: GameState, itemId: string | undefined): EngineTr
 }
 
 export function eatItem(state: GameState, itemId: string | undefined): EngineTransition {
-  if (!itemId) return failure(state, 'Impossible', 'Aucun aliment ciblé.');
+  if (!itemId || !isItemAccessible(state, itemId)) return failure(state, 'Impossible', 'Cet aliment n’est pas accessible.');
   const item = state.items[itemId];
-  if (!item || item.location.kind !== 'inventory' || item.definitionId !== 'apple') return failure(state, 'Impossible', 'Cet objet ne peut pas être mangé maintenant.');
+  if (!item || item.definitionId !== 'apple') return failure(state, 'Impossible', 'Cet objet ne peut pas être mangé maintenant.');
+
   const next = cloneState(state);
-  next.player.needs.hunger += FOOD_RULES.apple.hungerEffect; next.player.needs.thirst += FOOD_RULES.apple.thirstEffect;
-  next.player.inventoryIds = next.player.inventoryIds.filter((id) => id !== itemId);
-  const nextItem = next.items[itemId]; if (nextItem) nextItem.location = { kind: 'consumed' };
-  clampNeeds(next); advanceTime(next, FOOD_RULES.apple.consumptionSeconds);
+  const nextItem = next.items[itemId];
+  if (!nextItem) return failure(state, 'Impossible', 'Cet aliment a disparu.');
+
+  next.player.needs.hunger += FOOD_RULES.apple.hungerEffect;
+  next.player.needs.thirst += FOOD_RULES.apple.thirstEffect;
+  if (nextItem.location.kind === 'inventory') {
+    next.player.inventoryIds = next.player.inventoryIds.filter((id) => id !== itemId);
+  } else if (nextItem.location.kind === 'container') {
+    const source = next.containers[nextItem.location.id];
+    if (source) source.contentIds = source.contentIds.filter((id) => id !== itemId);
+  }
+  nextItem.location = { kind: 'consumed' };
+  clampNeeds(next);
+  advanceTime(next, FOOD_RULES.apple.consumptionSeconds);
   return success(next, 'Vous mangez la pomme.', 'Elle calme nettement la faim et apporte aussi un peu d’eau.', FOOD_RULES.apple.consumptionSeconds);
 }
 
 export function drinkItem(state: GameState, itemId: string | undefined, requestedMl: number | undefined): EngineTransition {
-  if (!itemId) return failure(state, 'Impossible', 'Aucun contenant ciblé.');
+  if (!itemId || !isItemAccessible(state, itemId)) return failure(state, 'Impossible', 'Ce contenant n’est pas accessible.');
   const item = state.items[itemId];
-  if (!item || item.location.kind !== 'inventory' || item.definitionId !== 'water_bottle') return failure(state, 'Impossible', 'Vous ne pouvez pas boire depuis cet objet maintenant.');
-  const available = item.liquidMl ?? 0; if (available <= 0) return failure(state, 'Bouteille vide', 'Il ne reste plus d’eau.');
+  if (!item || item.definitionId !== 'water_bottle') return failure(state, 'Impossible', 'Vous ne pouvez pas boire depuis cet objet maintenant.');
+  const available = item.liquidMl ?? 0;
+  if (available <= 0) return failure(state, 'Bouteille vide', 'Il ne reste plus d’eau.');
   const amount = Math.max(1, Math.min(requestedMl ?? WATER_RULES.servingMl, available));
-  const next = cloneState(state); const nextItem = next.items[itemId]; if (!nextItem) return failure(state, 'Impossible', 'Le contenant a disparu.');
+  const next = cloneState(state); const nextItem = next.items[itemId];
+  if (!nextItem) return failure(state, 'Impossible', 'Le contenant a disparu.');
   nextItem.liquidMl = Math.max(0, (nextItem.liquidMl ?? 0) - amount);
   next.player.needs.thirst += WATER_RULES.thirstEffectPerServing * (amount / WATER_RULES.servingMl);
-  clampNeeds(next); advanceTime(next, WATER_RULES.bottleDrinkSeconds);
+  clampNeeds(next);
+  advanceTime(next, WATER_RULES.bottleDrinkSeconds);
   return success(next, 'Vous buvez.', `${amount} ml d’eau consommés.`, WATER_RULES.bottleDrinkSeconds);
 }
 
