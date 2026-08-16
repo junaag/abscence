@@ -82,6 +82,22 @@ export function describeCurrentLocation(state: GameState): string {
     base = firstVisit
       ? 'Vous avancez dans les rues du quartier. À chaque portion parcourue, quelques façades et intersections nouvelles émergent de ce que vous ne connaissiez pas encore.'
       : 'Vous continuez à pied dans le quartier, en laissant derrière vous les portions de rue déjà parcourues.';
+  } else if (location.poiSite) {
+    const site = location.poiSite;
+    if (site.phase === 'outside') {
+      if (!site.observed) {
+        base = firstVisit
+          ? `Vous arrivez devant ${location.name}. De l’extérieur, le lieu paraît intact mais désert. Les accès, les vitrages et les objets visibles derrière les ouvertures restent difficiles à lire d’un simple coup d’œil. Aucun mouvement humain ne vient rompre le calme.`
+          : `Vous revenez devant ${location.name}. Le bâtiment est toujours silencieux et ses abords n’ont visiblement pas changé.`;
+      } else {
+        base = `Vous restez devant ${location.name}. Après avoir observé les abords, vous avez une meilleure idée des accès et de ce qui est visible depuis l’extérieur. Rien n’a bougé pendant votre observation.`;
+      }
+    } else if (!site.searched) {
+      base = `À l’intérieur de ${location.name}, le silence devient plus dense. L’endroit semble avoir été quitté au milieu de son fonctionnement normal : objets en place, passages dégagés, aucune trace évidente d’un départ organisé. Plusieurs zones pourraient être fouillées plus attentivement.`;
+    } else {
+      base = `L’intérieur de ${location.name} vous est maintenant familier. Vous avez déjà inspecté méthodiquement les zones accessibles.`;
+      if (items.length > 0) base += ` Ce que vous avez mis de côté reste visible : ${joinFrench(items)}.`;
+    }
   } else {
     base = firstVisit
       ? `Vous arrivez devant ${location.name}. Le lieu est silencieux et rien, de l’extérieur, ne permet encore de savoir ce qui s’est passé ici.`
