@@ -18,6 +18,12 @@ function putAppleInFridge(state: GameState): void {
   fridge.contentIds.push(apple.id);
 }
 
+function takePhone(state: GameState): GameState {
+  const transition = performAction(state, { id: 'TAKE_ITEM', targetId: 'phone_01' });
+  if (!transition.result.success) throw new Error('phone fixture could not be taken');
+  return transition.state;
+}
+
 describe('deterministic infrastructure transitions', () => {
   it('applies a due electricity transition exactly once', () => {
     const state = createInitialState();
@@ -32,7 +38,7 @@ describe('deterministic infrastructure transitions', () => {
   });
 
   it('interrupts a long recharge when electricity becomes unavailable', () => {
-    let state = createInitialState();
+    let state = takePhone(createInitialState());
     addOutlet(state);
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
     state.infrastructure.transitions = [{ id: 'power_off', network: 'electricity', atSeconds: state.engine.elapsedSeconds + 300, processed: false, available: false }];
