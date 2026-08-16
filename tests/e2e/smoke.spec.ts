@@ -31,7 +31,7 @@ test('closing a container popup naturally closes the container', async ({ page }
 
 test('using the phone from its object popup opens the phone interface', async ({ page }) => {
   await page.getByRole('button', { name: /Inventaire/ }).click();
-  await page.getByRole('button', { name: /Téléphone/ }).click();
+  await page.locator('[data-open-item="phone_01"]').click();
   await page.getByRole('button', { name: /^Utiliser/ }).click();
   await expect(page.getByTestId('phone-view')).toBeVisible();
 });
