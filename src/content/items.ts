@@ -27,10 +27,19 @@ export interface InspectionComponent {
   operation?: string;
 }
 
+export type EquipmentSlot = 'back' | 'waist';
+
+export interface EquipmentComponent {
+  slot: EquipmentSlot;
+  capacityBonus: number;
+}
+
 export interface ItemDefinition {
   id: string;
   name: string;
   portable?: boolean;
+  carryCost?: number;
+  equipment?: EquipmentComponent;
   inspection?: InspectionComponent;
   battery?: BatteryComponent;
   usable?: UsableComponent;
@@ -42,6 +51,7 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   apple: Object.freeze({
     id: 'apple',
     name: 'Pomme',
+    carryCost: 0.25,
     inspection: Object.freeze({
       role: 'Un aliment consommable qui calme la faim et apporte aussi un peu d’eau.',
       operation: 'Elle se mange directement et ne nécessite aucun outil.',
@@ -55,6 +65,7 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   water_bottle: Object.freeze({
     id: 'water_bottle',
     name: 'Bouteille d’eau',
+    carryCost: 0.8,
     inspection: Object.freeze({
       role: 'Un contenant transportable pour conserver et boire de l’eau.',
       operation: 'Elle peut être bue par petites quantités et remplie à une source d’eau utilisable.',
@@ -63,6 +74,7 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   towel: Object.freeze({
     id: 'towel',
     name: 'Torchon',
+    carryCost: 0.2,
     inspection: Object.freeze({
       role: 'Un textile absorbant utile pour éponger de petites quantités d’eau.',
       operation: 'Il s’utilise directement sur une zone humide accessible.',
@@ -71,6 +83,7 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   key: Object.freeze({
     id: 'key',
     name: 'Petite clé',
+    carryCost: 0.05,
     inspection: Object.freeze({
       role: 'Une petite clé métallique. Sa serrure correspondante n’est pas identifiée.',
       operation: 'Il faudra trouver une serrure compatible avant de pouvoir déterminer son utilité exacte.',
@@ -79,8 +92,9 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
   smartphone: Object.freeze({
     id: 'smartphone',
     name: 'Téléphone',
+    carryCost: 0.4,
     inspection: Object.freeze({
-      role: 'Votre téléphone personnel. Il donne accès aux informations enregistrées et aux fonctions de communication.',
+      role: 'Un smartphone verrouillé mais utilisable. Son contenu peut révéler des informations sur la personne qui le possédait.',
       operation: 'Il fonctionne sur batterie ; les appels, SMS et données dépendent aussi de l’état du réseau mobile.',
     }),
     battery: Object.freeze({
@@ -91,9 +105,49 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
     }),
     usable: Object.freeze({ durationSeconds: 3, uiIntent: 'OPEN_PHONE' }),
   }),
+  wristwatch: Object.freeze({
+    id: 'wristwatch',
+    name: 'Montre',
+    carryCost: 0.05,
+    inspection: Object.freeze({
+      role: 'Une montre simple. Elle permet de connaître l’heure sans dépendre d’un réseau ou d’un téléphone.',
+      operation: 'Il suffit de la garder avec vous pour consulter l’heure.',
+    }),
+  }),
+  backpack: Object.freeze({
+    id: 'backpack',
+    name: 'Sac à dos',
+    carryCost: 0.8,
+    equipment: Object.freeze({ slot: 'back', capacityBonus: 8 }),
+    inspection: Object.freeze({
+      role: 'Un sac à dos classique qui augmente nettement ce que vous pouvez transporter.',
+      operation: 'Il doit être équipé sur le dos pour fournir sa capacité supplémentaire.',
+    }),
+  }),
+  waist_bag: Object.freeze({
+    id: 'waist_bag',
+    name: 'Sac banane',
+    carryCost: 0.3,
+    equipment: Object.freeze({ slot: 'waist', capacityBonus: 3 }),
+    inspection: Object.freeze({
+      role: 'Une petite sacoche portée à la taille. Elle ajoute un espace de transport accessible sans occuper le dos.',
+      operation: 'Elle peut être équipée en même temps qu’un sac à dos.',
+    }),
+  }),
+  hiking_backpack: Object.freeze({
+    id: 'hiking_backpack',
+    name: 'Sac de randonnée',
+    carryCost: 1.2,
+    equipment: Object.freeze({ slot: 'back', capacityBonus: 15 }),
+    inspection: Object.freeze({
+      role: 'Un grand sac de randonnée conçu pour emporter beaucoup plus de matériel.',
+      operation: 'Il occupe l’emplacement du dos et remplace donc un sac à dos classique lorsqu’il est équipé.',
+    }),
+  }),
   flashlight: Object.freeze({
     id: 'flashlight',
     name: 'Lampe torche',
+    carryCost: 0.5,
     inspection: Object.freeze({
       role: 'Une source de lumière portable alimentée par batterie.',
       operation: 'Un interrupteur permet de l’allumer ou de l’éteindre ; la batterie se décharge lorsqu’elle reste allumée.',
@@ -109,6 +163,7 @@ export const ITEM_DEFINITIONS: Readonly<Record<string, ItemDefinition>> = Object
     id: 'wall_outlet',
     name: 'Prise électrique',
     portable: false,
+    carryCost: 0,
     inspection: Object.freeze({
       role: 'Une prise murale fixe pouvant alimenter ou recharger un appareil compatible.',
       operation: 'Elle ne fournit du courant que si le réseau électrique du lieu est encore disponible.',
