@@ -48,6 +48,15 @@ export interface LocationFeatures {
   powerOutlet?: boolean;
 }
 
+export type PoiSitePhase = 'outside' | 'inside';
+
+export interface PoiSiteState {
+  sourceId: string;
+  phase: PoiSitePhase;
+  observed: boolean;
+  searched: boolean;
+}
+
 export type WorldPosition =
   | { x: number; y: number }
   | { lat: number; lon: number };
@@ -60,6 +69,7 @@ export interface LocationState {
   ventilation: number;
   features: LocationFeatures;
   position?: WorldPosition;
+  poiSite?: PoiSiteState;
 }
 
 export interface ConnectionState {
@@ -269,6 +279,10 @@ export type ActionId =
   | 'MOVE'
   | 'TRAVEL_TO_MAP_POI'
   | 'WALK_TO_MAP_POINT'
+  | 'OBSERVE_LOCATION'
+  | 'ENTER_POI'
+  | 'SEARCH_LOCATION'
+  | 'LEAVE_POI'
   | 'OPEN_CONNECTION'
   | 'OPEN_CONTAINER'
   | 'TAKE_ITEM'
