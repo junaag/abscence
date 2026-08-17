@@ -340,7 +340,7 @@ export function createMapController(
     const controller = new AbortController();
     poiAbort = controller;
     const sequence = ++poiRequestSequence;
-    const timeout = window.setTimeout(() => controller.abort(), 4500);
+    const timeout = window.setTimeout(() => controller.abort(), 20000);
     try {
       const pois = await fetchOverpassPois(centerPoint, controller.signal);
       if (sequence !== poiRequestSequence) return;
@@ -376,7 +376,11 @@ export function createMapController(
 
     map.on('click', (event) => {
       const point = { lat: event.latlng.lat, lng: event.latlng.lng };
-      L.popup({ closeButton: true, autoPan: true }).setLatLng(event.latlng).setContent(walkPopup(point, onWalk)).openOn(map!);
+      const handleWalk = (encodedTarget: string): void => {
+        map?.closePopup();
+        onWalk(encodedTarget);
+      };
+      L.popup({ closeButton: true, autoPan: true }).setLatLng(event.latlng).setContent(walkPopup(point, handleWalk)).openOn(map!);
     });
     map.on('movestart zoomstart', startInteraction);
     map.on('moveend zoomend', endInteraction);
