@@ -27,15 +27,17 @@ async function reachStreet(page: import('@playwright/test').Page): Promise<void>
   await page.getByRole('button', { name: /Aller vers Rue devant le domicile/ }).click();
 }
 
-test('only discovered POIs render and a failed travel explains why instead of looking inactive', async ({ page }) => {
+test('geographic POIs render above fog while travel still enforces the player location', async ({ page }) => {
   await page.getByRole('button', { name: /Carte/ }).click();
   await expect(page.getByTestId('map-fog')).toBeVisible();
 
   await expect(page.locator('.leaflet-marker-icon[title="Domicile"]')).toBeVisible({ timeout: 6000 });
   await expect(page.locator('.leaflet-marker-icon[title="Station Ingres"]')).toBeVisible();
+  await expect(page.locator('.leaflet-marker-icon[title="Garage du Sud"]')).toBeVisible();
+  await expect(page.locator('.leaflet-marker-icon[title="Police municipale"]')).toBeVisible();
+  await expect(page.locator('.leaflet-marker-icon[title="Pharmacie du quartier"]')).toBeVisible();
   await expect(page.locator('[aria-label="Automobile — Station service"]')).toBeVisible();
-  await expect(page.locator('.leaflet-marker-icon[title="Pharmacie du quartier"]')).toHaveCount(0);
-  await expect(page.locator('[data-poi-category="Santé"]')).toHaveCount(0);
+  await expect(page.locator('[data-poi-category="Santé"]')).toBeVisible();
 
   const poiPaneZ = await page.locator('.leaflet-poi-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
   const fogPaneZ = await page.locator('.leaflet-fog-pane').evaluate((element) => Number.parseInt(getComputedStyle(element).zIndex, 10));
