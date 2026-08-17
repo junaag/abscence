@@ -1,4 +1,8 @@
-export const OVERPASS_ENDPOINT = 'https://overpass-api.de/api/interpreter';
+export const OVERPASS_ENDPOINTS = Object.freeze([
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+] as const);
+export const OVERPASS_ENDPOINT = OVERPASS_ENDPOINTS[0];
 export const MAP_POI_MIN_ZOOM = 15;
 export const MAP_POI_RADIUS_M = 1200;
 export const MAP_RESIDENTIAL_POI_RADIUS_M = 650;
@@ -124,7 +128,7 @@ export function buildOverpassPoiQuery(lat: number, lng: number, radiusM = MAP_PO
   const radius = Math.max(100, Math.min(1500, Math.round(radiusM)));
   const residentialRadius = Math.min(radius, MAP_RESIDENTIAL_POI_RADIUS_M);
   const center = `${lat.toFixed(6)},${lng.toFixed(6)}`;
-  return `[out:json][timeout:4];\n` +
+  return `[out:json][timeout:8];\n` +
     `(\n` +
     `nwr["shop"~"^(supermarket|convenience|grocery|greengrocer|bakery|books|mall|car_repair)$"](around:${radius},${center});\n` +
     `nwr["amenity"~"^(fuel|police|fire_station|hospital|clinic|doctors|pharmacy|townhall)$"](around:${radius},${center});\n` +
@@ -223,18 +227,45 @@ export function mapPoiCacheKey(center: { lat: number; lng: number }): string {
   return `${Math.round(center.lat * 200)}:${Math.round(center.lng * 200)}`;
 }
 
+async function requestOverpass(endpoint: string, body: URLSearchParams, parentSignal?: AbortSignal): Promise<{ elements?: OverpassElement[] }> {
+  const controller = new AbortController();
+  const abortFromParent = (): void => controller.abort();
+  if (parentSignal?.aborted) controller.abort();
+  else parentSignal?.addEventListener('abort', abortFromParent, { once: true });
+  const timeout = setTimeout(() => controller.abort(), 9000);
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+      },
+      body,
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new Error(`Overpass request failed: ${response.status}`);
+    return await response.json() as { elements?: OverpassElement[] };
+  } finally {
+    clearTimeout(timeout);
+    parentSignal?.removeEventListener('abort', abortFromParent);
+  }
+}
+
 export async function fetchOverpassPois(
   center: { lat: number; lng: number },
   signal?: AbortSignal,
 ): Promise<MapPoi[]> {
   const body = new URLSearchParams({ data: buildOverpassPoiQuery(center.lat, center.lng) });
-  const response = await fetch(OVERPASS_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-    body,
-    ...(signal ? { signal } : {}),
-  });
-  if (!response.ok) throw new Error(`Overpass request failed: ${response.status}`);
-  const payload = await response.json() as { elements?: OverpassElement[] };
-  return parseOverpassPois(Array.isArray(payload.elements) ? payload.elements : [], MAP_POI_MAX_RESULTS, center);
+  let lastError: unknown = new Error('Overpass unavailable');
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+    try {
+      const payload = await requestOverpass(endpoint, body, signal);
+      return parseOverpassPois(Array.isArray(payload.elements) ? payload.elements : [], MAP_POI_MAX_RESULTS, center);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      lastError = error;
+    }
+  }
+  throw lastError;
 }
