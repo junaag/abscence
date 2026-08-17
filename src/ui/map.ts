@@ -1,7 +1,6 @@
 import * as L from 'leaflet';
 import {
   DEFAULT_HOME_COORDINATES,
-  isMapPointExplored,
   normalizeMapUiState,
   updateMapViewport,
   type ExploredMapArea,
@@ -298,7 +297,6 @@ export function createMapController(
       ...pois.filter((poi) => poi.id !== 'home' && !(poi.category === 'Résidentiel' && mapDistanceMeters(poi, home) < 35)),
     ];
     for (const poi of candidates) {
-      if (!isMapPointExplored(state, poi)) continue;
       L.marker([poi.lat, poi.lng], { icon: poiIcon(poi), pane: 'poiPane', keyboard: true, title: poi.name, bubblingMouseEvents: false })
         .bindPopup(poiPopup(poi, onTravel))
         .addTo(poiLayer);
