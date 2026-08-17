@@ -1,14 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildOverpassPoiQuery,
   classifyMapPoi,
+  fetchOverpassPois,
   mapDistanceMeters,
   MAP_POI_CATEGORY_LIMITS,
   MAP_POI_MAX_RESULTS,
+  OVERPASS_ENDPOINTS,
   parseOverpassPois,
   type MapPoiCategory,
   type OverpassElement,
 } from '../../src/ui/map-pois';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
 
 describe('map POI adapter', () => {
   it('classifies automotive POIs separately from public services', () => {
@@ -34,13 +40,29 @@ describe('map POI adapter', () => {
 
   it('builds a bounded Overpass query and gives residential POIs a smaller local radius', () => {
     const query = buildOverpassPoiQuery(43.4053, 5.0548);
-    expect(query).toContain('[timeout:4]');
+    expect(query).toContain('[timeout:8]');
     expect(query).toContain('around:1200,43.405300,5.054800');
     expect(query).toContain('around:650,43.405300,5.054800');
     expect(query).toContain('supermarket|convenience|grocery|greengrocer|bakery|books|mall|car_repair');
     expect(query).not.toContain('restaurant|cafe|fast_food');
     expect(query).toContain('.core out center 70');
     expect(query).toContain('.residential out center 70');
+  });
+
+  it('falls back to the secondary public Overpass instance when the first one fails', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response('temporary failure', { status: 503 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        elements: [{ type: 'node', id: 1, lat: 43.4055, lon: 5.055, tags: { amenity: 'pharmacy', name: 'Pharmacie test' } }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const pois = await fetchOverpassPois({ lat: 43.4053, lng: 5.0548 });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(OVERPASS_ENDPOINTS[0]);
+    expect(fetchMock.mock.calls[1]?.[0]).toBe(OVERPASS_ENDPOINTS[1]);
+    expect(pois.map((poi) => poi.name)).toContain('Pharmacie test');
   });
 
   it('caps and balances dense urban POIs by category', () => {
