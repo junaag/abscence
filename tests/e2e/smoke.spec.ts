@@ -146,29 +146,25 @@ test('hamburger menu exposes home settings about and persists sound preference',
   await page.getByRole('button', { name: '‹ Menu' }).click();
   menu = page.getByTestId('menu-sheet');
   await menu.getByRole('button', { name: /^À propos/ }).click();
-  await expect(page.getByText('ABSENCE · v0.2.0-dev')).toBeVisible();
+  await expect(page.getByText('ABSENCE · v0.3.0-dev')).toBeVisible();
   await expect(page.getByText('Création : Julien Imbert.')).toBeVisible();
 });
 
-test('map mounts once and domicile uses the same residential POI treatment', async ({ page }) => {
-  await page.route('https://overpass-api.de/api/interpreter', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ elements: [] }) });
-  });
+test('Zone Alpha map controller is reused when the overlay is reopened', async ({ page }) => {
   await page.getByRole('button', { name: /Carte/ }).click();
-  const map = page.getByTestId('leaflet-map');
-  await expect(map).toBeVisible();
+  const host = page.getByTestId('zone-alpha-host');
+  await expect(host).toBeVisible();
   await expect(page.getByTestId('map-fog')).toBeVisible();
-  await expect(page.locator('.leaflet-container')).toHaveCount(1);
-  await expect(page.locator('.leaflet-marker-icon[title="Domicile"]')).toBeVisible();
-  await expect(page.locator('[aria-label="Résidentiel — Habitation"]')).toBeVisible();
-  await map.evaluate((element) => element.setAttribute('data-instance-token', 'persistent-map'));
+  await expect(page.locator('[data-poi-id="house_1"]')).toBeVisible();
+  await expect(page.locator('[aria-label="Maison 1 — Habitation"]')).toBeVisible();
+  await host.evaluate((element) => element.setAttribute('data-instance-token', 'persistent-map'));
 
-  await page.locator('.leaflet-marker-icon[title="Domicile"]').click();
+  await page.locator('[data-poi-id="house_1"]').click();
   await expect(page.getByRole('button', { name: 'S’y rendre' })).toBeVisible();
   await page.locator('nav').getByRole('button', { name: /Accueil/ }).click();
   await expect(page.getByTestId('home-view')).toBeVisible();
 
   await page.getByRole('button', { name: /Carte/ }).click();
-  await expect(page.getByTestId('leaflet-map')).toHaveAttribute('data-instance-token', 'persistent-map');
-  await expect(page.locator('.leaflet-container')).toHaveCount(1);
+  await expect(page.getByTestId('zone-alpha-host')).toHaveAttribute('data-instance-token', 'persistent-map');
+  await expect(page.getByTestId('zone-alpha-host')).toHaveCount(1);
 });
