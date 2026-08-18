@@ -1,5 +1,5 @@
 import { createInitialPhoneState } from './phone';
-import { ZONE_ALPHA_GARDEN_POSITION, ZONE_ALPHA_HOME_POSITION, ZONE_ALPHA_STREET_POSITION } from './zone-alpha';
+import { ZONE_ALPHA_GARDEN_POSITION, ZONE_ALPHA_HOME_POSITION, ZONE_ALPHA_STREET_POSITION } from './zone-alpha-core';
 import type { GameState } from '../engine/model';
 import { GAME_VERSION, SAVE_SCHEMA_VERSION } from '../version';
 
