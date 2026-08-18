@@ -99,30 +99,6 @@ export function normalizeMapUiState(value: unknown): MapUiState {
   };
 }
 
-function distanceMeters(a: MapCoordinate, b: MapCoordinate): number {
-  return Math.hypot(b.x - a.x, b.y - a.y);
-}
-
-function distanceToSegmentMeters(point: MapCoordinate, a: MapCoordinate, b: MapCoordinate): number {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lengthSquared = dx * dx + dy * dy;
-  if (lengthSquared <= 0.000001) return distanceMeters(point, a);
-  const t = clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared, 0, 1);
-  return Math.hypot(point.x - (a.x + dx * t), point.y - (a.y + dy * t));
-}
-
-export function isMapPointExplored(state: MapUiState, point: MapCoordinate): boolean {
-  const normalized = normalizeMapUiState(state);
-  if (normalized.explored.some((area) => distanceMeters(area, point) <= area.radiusM)) return true;
-  return normalized.exploredCorridors.some((corridor) => {
-    for (let index = 1; index < corridor.points.length; index += 1) {
-      if (distanceToSegmentMeters(point, corridor.points[index - 1]!, corridor.points[index]!) <= corridor.radiusM) return true;
-    }
-    return false;
-  });
-}
-
 export function loadMapUiState(storage: MapStateReadStorage): MapUiState {
   try {
     const raw = storage.getItem(MAP_STATE_KEY);
