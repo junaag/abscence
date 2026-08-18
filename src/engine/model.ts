@@ -64,6 +64,7 @@ export interface ConnectionState {
   locked: boolean;
   openSeconds: number;
   travelSeconds: number;
+  hiddenFromContext?: boolean;
 }
 
 export interface ContainerState {
