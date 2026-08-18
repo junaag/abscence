@@ -27,8 +27,7 @@ function genericZones(): PoiZoneState[] { return structuredClone(GENERIC); }
 
 function decode(sourceId: string, value: unknown): PoiZoneState[] | null {
   if (!Array.isArray(value) || !Array.isArray(value[1])) return null;
-  const rows = (value as Blueprint)[1].slice(0, 6);
-  const zones = rows.map((row): PoiZoneState | null => {
+  const zones = (value as Blueprint)[1].slice(0, 6).map((row): PoiZoneState | null => {
     if (!Array.isArray(row) || typeof row[0] !== 'string' || typeof row[1] !== 'string') return null;
     const [id, name, locked, surface = [], deep = [], rawRisk, clue, searchMinutes, hidden, revealsZoneId] = row;
     const risk = Array.isArray(rawRisk) ? {
@@ -36,14 +35,13 @@ function decode(sourceId: string, value: unknown): PoiZoneState[] | null {
       kind: rawRisk[0], label: rawRisk[1], description: rawRisk[2], discovered: false, resolved: false, triggered: false,
       secureSeconds: rawRisk[3], painPenalty: rawRisk[4], fatiguePenalty: rawRisk[5], stressPenalty: rawRisk[6],
     } : undefined;
-    const searchSeconds = Math.max(900, Math.min(3 * 3600, Math.round((Number(searchMinutes) || 45) * 60)));
     return {
-      id: id.slice(0, 60), name: name.slice(0, 100), locked: locked === true, discovered: hidden !== true,
-      hidden: hidden === true, surfaceRevealed: false, searched: false, searchSeconds, searchProgressSeconds: 0,
-      surfaceLootIds: Array.isArray(surface) ? surface.slice(0, 8) : [], deepLootIds: Array.isArray(deep) ? deep.slice(0, 8) : [],
-      ...(typeof revealsZoneId === 'string' && revealsZoneId ? { revealsZoneId: revealsZoneId.slice(0, 60) } : {}),
+      id: id.slice(0, 60), name: name.slice(0, 100), locked: locked === true, discovered: hidden !== true, hidden: hidden === true,
+      surfaceRevealed: false, searched: false, searchSeconds: Math.round((searchMinutes ?? 45) * 60), searchProgressSeconds: 0,
+      surfaceLootIds: surface.slice(0, 8), deepLootIds: deep.slice(0, 8),
+      ...(revealsZoneId ? { revealsZoneId: revealsZoneId.slice(0, 60) } : {}),
       ...(risk ? { risk } : {}),
-      ...(typeof clue === 'string' && clue ? { clue: { id: `${id}_clue_${stablePoiHash(`${sourceId}:${id}:clue`).toString(16)}`, text: clue.slice(0, 320), discovered: false } } : {}),
+      ...(clue ? { clue: { id: `${id}_clue_${stablePoiHash(`${sourceId}:${id}:clue`).toString(16)}`, text: clue.slice(0, 320), discovered: false } } : {}),
     };
   }).filter((zone): zone is PoiZoneState => zone !== null);
   return zones.length ? zones : null;
@@ -64,9 +62,8 @@ export function ensurePoiSiteStructure(site: PoiSiteState): PoiSiteState {
   site.entranceForced ??= false;
   if (!site.zones?.length) site.zones = genericZones();
   for (const zone of site.zones) {
-    zone.searchSeconds = Math.max(900, Number(zone.searchSeconds) || 2700);
-    zone.searchProgressSeconds = Math.max(0, Math.min(zone.searchSeconds, Number(zone.searchProgressSeconds) || 0));
-    if (zone.searched) zone.searchProgressSeconds = zone.searchSeconds;
+    zone.searchSeconds ??= 2700;
+    zone.searchProgressSeconds ??= zone.searched ? zone.searchSeconds : 0;
     zone.hidden ??= false;
   }
   return site;
@@ -79,8 +76,8 @@ export function getPoiZone(site: PoiSiteState, zoneId: string | undefined): PoiZ
   return zoneId ? zones.find((zone) => zone.id === zoneId) : zones[0];
 }
 export function getActivePoiZone(site: PoiSiteState): PoiZoneState | undefined { return getPoiZone(site, site.activeZoneId); }
-export function getPoiZoneSearchSeconds(zone: PoiZoneState): number { return Math.max(900, Number(zone.searchSeconds) || 2700); }
-export function getPoiZoneSearchProgressSeconds(zone: PoiZoneState): number { return Math.max(0, Math.min(getPoiZoneSearchSeconds(zone), Number(zone.searchProgressSeconds) || 0)); }
+export function getPoiZoneSearchSeconds(zone: PoiZoneState): number { return zone.searchSeconds ?? 2700; }
+export function getPoiZoneSearchProgressSeconds(zone: PoiZoneState): number { return zone.searchProgressSeconds ?? (zone.searched ? getPoiZoneSearchSeconds(zone) : 0); }
 export function getPoiZoneSearchRemainingSeconds(zone: PoiZoneState): number { return Math.max(0, getPoiZoneSearchSeconds(zone) - getPoiZoneSearchProgressSeconds(zone)); }
 export function getPoiLootDefinitionIds(site: PoiSiteState, zoneId: string, layer: 'surface' | 'deep'): readonly string[] {
   const zone = getPoiZone(site, zoneId);
