@@ -1,6 +1,6 @@
 import { getItemDefinition } from '../../content/items';
 import { applyPhysicalExertion, getEncumbranceProfile, scalePhysicalDuration } from '../encumbrance';
-import type { EngineTransition, GameState, ItemState, LocationState, PoiRiskState, PoiZoneState, WorldPosition } from '../model';
+import type { EngineTransition, GameState, ItemState, LocationState, PoiRiskState, PoiZoneState } from '../model';
 import { getDistanceMeters } from '../perception';
 import {
   createPoiSiteState,
@@ -20,10 +20,8 @@ import { failure, success } from './result';
 interface MapTravelTarget {
   id: string;
   name: string;
-  x?: number;
-  y?: number;
-  lat?: number;
-  lon?: number;
+  x: number;
+  y: number;
   category?: string;
   typeLabel?: string;
   blueprint?: unknown;
@@ -35,26 +33,18 @@ function parseTarget(value: string | undefined): MapTravelTarget | null {
     const p = JSON.parse(decodeURIComponent(value)) as Partial<MapTravelTarget>;
     const id = typeof p.id === 'string' ? p.id.trim() : '';
     const name = typeof p.name === 'string' ? p.name.trim() : '';
-    if (!id || !name) return null;
-    const x = Number(p.x), y = Number(p.y), lat = Number(p.lat), lon = Number(p.lon);
-    const hasLocal = Number.isFinite(x) && Number.isFinite(y) && Math.abs(x) <= 100000 && Math.abs(y) <= 100000;
-    const hasGeo = Number.isFinite(lat) && Number.isFinite(lon) && lat >= -85 && lat <= 85 && lon >= -180 && lon <= 180;
-    if (!hasLocal && !hasGeo) return null;
+    const x = Number(p.x), y = Number(p.y);
+    if (!id || !name || !Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > 100000 || Math.abs(y) > 100000) return null;
     return {
       id: id.slice(0, 120),
       name: name.slice(0, 120),
-      ...(hasLocal ? { x, y } : { lat, lon }),
+      x,
+      y,
       ...(typeof p.category === 'string' ? { category: p.category.slice(0, 60) } : {}),
       ...(typeof p.typeLabel === 'string' ? { typeLabel: p.typeLabel.slice(0, 80) } : {}),
       ...(p.blueprint !== undefined ? { blueprint: p.blueprint } : {}),
     };
   } catch { return null; }
-}
-
-function targetPosition(target: MapTravelTarget): WorldPosition {
-  return target.x !== undefined && target.y !== undefined
-    ? { x: target.x, y: target.y }
-    : { lat: target.lat!, lon: target.lon! };
 }
 
 function currentPoi(state: GameState): LocationState | null {
@@ -63,7 +53,7 @@ function currentPoi(state: GameState): LocationState | null {
 }
 
 function distance(state: GameState, target: MapTravelTarget): number | null {
-  return getDistanceMeters(state, state.player.locationId, null, targetPosition(target));
+  return getDistanceMeters(state, state.player.locationId, null, { x: target.x, y: target.y });
 }
 
 function isOutdoorMapOrigin(state: GameState): boolean {
@@ -74,8 +64,9 @@ function isOutdoorMapOrigin(state: GameState): boolean {
 }
 
 function mapBlocked(state: GameState): EngineTransition | null {
-  if (isOutdoorMapOrigin(state)) return null;
-  return failure(state, 'Impossible depuis ici', 'Vous devez d’abord rejoindre l’extérieur avant de vous déplacer sur la carte.');
+  return isOutdoorMapOrigin(state)
+    ? null
+    : failure(state, 'Impossible depuis ici', 'Vous devez d’abord rejoindre l’extérieur avant de vous déplacer sur la carte.');
 }
 
 function loadNote(state: GameState): string {
@@ -344,7 +335,7 @@ export function walkToMapPoint(state: GameState, encodedTarget: string | undefin
     ambientHumidityPercent: origin?.ambientHumidityPercent ?? 50,
     ventilation: 1,
     features: {},
-    position: targetPosition(target),
+    position: { x: target.x, y: target.y },
   };
   next.player.locationId = 'map_walk_position';
   recordLocationVisit(next, 'map_walk_position');
@@ -379,7 +370,7 @@ export function travelToMapPoi(state: GameState, encodedTarget: string | undefin
         ambientHumidityPercent: origin?.ambientHumidityPercent ?? 50,
         ventilation: 1,
         features: {},
-        position: targetPosition(target),
+        position: { x: target.x, y: target.y },
         poiSite: createPoiSiteState(target.id, target.category, target.typeLabel, target.blueprint),
       };
     } else if (!existing.poiSite) existing.poiSite = createPoiSiteState(target.id, target.category, target.typeLabel, target.blueprint);
