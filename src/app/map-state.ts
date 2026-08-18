@@ -1,4 +1,4 @@
-import { ZONE_ALPHA_BOUNDS, ZONE_ALPHA_HOME_POSITION } from '../content/zone-alpha';
+import { ZONE_ALPHA_BOUNDS, ZONE_ALPHA_HOME_POSITION } from '../content/zone-alpha-core';
 
 export const MAP_STATE_KEY = 'absence-v030-map-state-zone-alpha-r1';
 export const DEFAULT_HOME_COORDINATES = Object.freeze({ ...ZONE_ALPHA_HOME_POSITION });
