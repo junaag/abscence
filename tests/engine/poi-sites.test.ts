@@ -113,7 +113,7 @@ describe('structured narrative POI sites', () => {
   });
 
   it('applies consequences once when a known risk is ignored during a long search', () => {
-    let state = enterObservedPoi(reachPoi('Automobile', 'Station service', 'Station risquée'));
+    const state = enterObservedPoi(reachPoi('Automobile', 'Station service', 'Station risquée'));
     const painBefore = state.player.needs.pain;
     const stressBefore = state.player.needs.stress;
     const search = performAction(state, { id: 'SEARCH_LOCATION' });
