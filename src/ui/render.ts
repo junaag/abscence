@@ -1,7 +1,6 @@
 import {
   addExploredMapArea,
   addExploredMapCorridor,
-  DEFAULT_HOME_COORDINATES,
   updateMapViewport,
   type MapCoordinate,
   type MapUiState,
@@ -132,8 +131,8 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
 
   const revealMovementOnMap = (previousState: GameState): void => {
     const destination = locationMapCoordinate(state);
-    if (!destination) return;
-    const origin = locationMapCoordinate(previousState) ?? { ...DEFAULT_HOME_COORDINATES };
+    const origin = locationMapCoordinate(previousState);
+    if (!destination || !origin) return;
 
     let nextMapState = addExploredMapArea(mapState, { ...destination, radiusM: 16 });
     const moved = Math.abs(origin.x - destination.x) > 0.01 || Math.abs(origin.y - destination.y) > 0.01;
