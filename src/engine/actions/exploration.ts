@@ -66,10 +66,16 @@ function distance(state: GameState, target: MapTravelTarget): number | null {
   return getDistanceMeters(state, state.player.locationId, null, targetPosition(target));
 }
 
+function isOutdoorMapOrigin(state: GameState): boolean {
+  const location = state.locations[state.player.locationId];
+  if (!location) return false;
+  if (location.poiSite) return location.poiSite.phase === 'outside';
+  return location.ventilation >= 0.8;
+}
+
 function mapBlocked(state: GameState): EngineTransition | null {
-  return currentPoi(state)?.poiSite?.phase === 'inside'
-    ? failure(state, 'Vous êtes à l’intérieur', 'Sortez d’abord avant de reprendre votre déplacement.')
-    : null;
+  if (isOutdoorMapOrigin(state)) return null;
+  return failure(state, 'Impossible depuis ici', 'Vous devez d’abord rejoindre l’extérieur avant de vous déplacer sur la carte.');
 }
 
 function loadNote(state: GameState): string {
