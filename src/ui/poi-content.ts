@@ -8,10 +8,10 @@ type Zone = readonly [
   readonly string[],
   readonly string[],
   (Risk | undefined)?,
-  string?,
-  number?,
-  boolean?,
-  string?,
+  (string | undefined)?,
+  (number | undefined)?,
+  (boolean | undefined)?,
+  (string | undefined)?,
 ];
 export type PoiBlueprint = readonly [boolean, readonly Zone[]];
 
