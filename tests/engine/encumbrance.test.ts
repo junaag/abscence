@@ -4,8 +4,8 @@ import { getEncumbranceProfile } from '../../src/engine/encumbrance';
 import type { GameState } from '../../src/engine/model';
 import { createInitialState } from '../../src/engine/state';
 
-function target(id: string, name: string, lat: number, lon: number): string {
-  return encodeURIComponent(JSON.stringify({ id, name, lat, lon }));
+function target(id: string, name: string, x: number, y: number): string {
+  return encodeURIComponent(JSON.stringify({ id, name, x, y }));
 }
 
 function reachGarden(): GameState {
@@ -33,7 +33,7 @@ function addHeavyLoad(state: GameState): void {
 
 function reachPoiInterior(): GameState {
   let state = reachGarden();
-  state = performAction(state, { id: 'TRAVEL_TO_MAP_POI', targetId: target('node:load', 'Lieu test', 43.4055, 5.0549) }).state;
+  state = performAction(state, { id: 'TRAVEL_TO_MAP_POI', targetId: target('node:load', 'Lieu test', 190, 336) }).state;
   state = performAction(state, { id: 'OBSERVE_LOCATION' }).state;
   state = performAction(state, { id: 'ENTER_POI' }).state;
   return state;
@@ -60,10 +60,12 @@ describe('encumbrance', () => {
 
     const lightBeforeFatigue = light.player.needs.fatigue;
     const heavyBeforeFatigue = heavy.player.needs.fatigue;
-    const destination = target('walk', 'Rue / extérieur', 43.40555, 5.05495);
+    const destination = target('walk', 'Rue / extérieur', 130, 338);
     const lightWalk = performAction(light, { id: 'WALK_TO_MAP_POINT', targetId: destination });
     const heavyWalk = performAction(heavy, { id: 'WALK_TO_MAP_POINT', targetId: destination });
 
+    expect(lightWalk.result.success).toBe(true);
+    expect(heavyWalk.result.success).toBe(true);
     expect(heavyWalk.result.elapsedSeconds).toBeGreaterThan(lightWalk.result.elapsedSeconds);
     expect(heavyWalk.state.player.needs.fatigue - heavyBeforeFatigue)
       .toBeGreaterThan(lightWalk.state.player.needs.fatigue - lightBeforeFatigue);
@@ -71,7 +73,7 @@ describe('encumbrance', () => {
     expect(heavyWalk.result.body).toContain('Charge lourde');
   });
 
-  it('makes a methodical search take longer and add more fatigue under a heavy load', () => {
+  it('makes each long-search work session take longer and add more fatigue under a heavy load', () => {
     const light = reachPoiInterior();
     const heavy = structuredClone(light);
     addHeavyLoad(heavy);
@@ -81,8 +83,10 @@ describe('encumbrance', () => {
     const lightSearch = performAction(light, { id: 'SEARCH_LOCATION' });
     const heavySearch = performAction(heavy, { id: 'SEARCH_LOCATION' });
 
-    expect(lightSearch.result.elapsedSeconds).toBe(12 * 60);
-    expect(heavySearch.result.elapsedSeconds).toBeGreaterThan(12 * 60);
+    expect(lightSearch.result.success).toBe(true);
+    expect(heavySearch.result.success).toBe(true);
+    expect(lightSearch.result.elapsedSeconds).toBe(15 * 60);
+    expect(heavySearch.result.elapsedSeconds).toBeGreaterThan(15 * 60);
     expect(heavySearch.state.player.needs.fatigue - heavyBeforeFatigue)
       .toBeGreaterThan(lightSearch.state.player.needs.fatigue - lightBeforeFatigue);
     expect(heavySearch.result.body).toContain('Charge lourde');
