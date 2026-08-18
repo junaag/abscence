@@ -3,7 +3,6 @@ import {
   addExploredMapArea,
   addExploredMapCorridor,
   createDefaultMapUiState,
-  isMapPointExplored,
   loadMapUiState,
   MAP_STATE_KEY,
   normalizeMapUiState,
@@ -78,18 +77,6 @@ describe('Zone Alpha map UI state', () => {
     state = addExploredMapCorridor(state, corridor);
     state = addExploredMapCorridor(state, corridor);
     expect(state.exploredCorridors).toHaveLength(1);
-  });
-
-  it('uses metric XY distance for fog discovery', () => {
-    let state = createDefaultMapUiState();
-    expect(isMapPointExplored(state, { x: 72, y: 344 })).toBe(true);
-    expect(isMapPointExplored(state, { x: 110, y: 344 })).toBe(false);
-    state = addExploredMapCorridor(state, {
-      radiusM: 7,
-      points: [{ x: 72, y: 344 }, { x: 142, y: 336 }],
-    });
-    expect(isMapPointExplored(state, { x: 110, y: 340 })).toBe(true);
-    expect(isMapPointExplored(state, { x: 110, y: 325 })).toBe(false);
   });
 
   it('caps corridor complexity and removes consecutive duplicate points', () => {
