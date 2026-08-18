@@ -99,12 +99,12 @@ describe('controlled preview save migration', () => {
     expect(LEGACY_PREVIEW_SAVE_KEYS).toEqual(['absence-preview-v0111', 'absence-preview-v019']);
   });
 
-  it('migrates a genuine fresh v0.1.11 state into a valid v0.2 state', () => {
+  it('migrates a genuine fresh v0.1.11 state into a valid current engine state', () => {
     const migrated = migrateLegacyPreviewState(historicalEngine.createInitialState());
     expect(migrated).not.toBeNull();
     expect(validateState(migrated!)).toEqual([]);
     expect(migrated).toMatchObject({
-      gameVersion: '0.2.0-dev',
+      gameVersion: '0.3.0-dev',
       player: {
         locationId: 'bedroom',
         healthPv: 100,
@@ -189,11 +189,11 @@ describe('controlled preview save migration', () => {
     expect(migrated?.state.player.healthPv).toBe(71);
   });
 
-  it('always prefers an existing valid v0.2 save over historical preview keys', () => {
+  it('always prefers an existing valid current save over historical preview keys', () => {
     const storage = new MemoryStorage();
-    const v020 = createInitialState();
-    v020.player.healthPv = 62;
-    storage.setItem(SAVE_KEY, JSON.stringify(v020));
+    const current = createInitialState();
+    current.player.healthPv = 62;
+    storage.setItem(SAVE_KEY, JSON.stringify(current));
     const legacy = historicalEngine.createInitialState();
     historicalStats(legacy).health = 22;
     storage.setItem('absence-preview-v0111', JSON.stringify(legacy));
@@ -209,7 +209,7 @@ describe('controlled preview save migration', () => {
     expect(loadState(storage)).toEqual(createInitialState());
   });
 
-  it('returns a normal v0.2 GameState type after migration', () => {
+  it('returns a normal current GameState type after migration', () => {
     const migrated: GameState | null = migrateLegacyPreviewState(historicalEngine.createInitialState());
     expect(migrated?.schemaVersion).toBe(1);
   });
