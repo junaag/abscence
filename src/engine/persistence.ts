@@ -6,7 +6,7 @@ import { assertValidPhoneState } from './phone-validation';
 import { normalizePersistedGameState } from './save-normalization';
 import { createInitialState } from './state';
 
-export const SAVE_KEY = 'absence-v020-prologue-r2';
+export const SAVE_KEY = 'absence-v030-zone-alpha-r1';
 
 export interface ReadStorage {
   getItem(key: string): string | null;
