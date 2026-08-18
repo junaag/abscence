@@ -1,13 +1,12 @@
 import { GAME_VERSION, SAVE_SCHEMA_VERSION } from '../version';
 import { assertValidState } from './invariants';
-import { loadLegacyPreviewMigration } from './legacy-migration';
 import { assertValidLocationEnvironmentState } from './location-environment-validation';
 import type { GameState } from './model';
 import { assertValidPhoneState } from './phone-validation';
 import { normalizePersistedGameState } from './save-normalization';
 import { createInitialState } from './state';
 
-export const SAVE_KEY = 'absence-v020-dev';
+export const SAVE_KEY = 'absence-v030-zone-alpha-r1';
 
 export interface ReadStorage {
   getItem(key: string): string | null;
@@ -19,10 +18,7 @@ export interface WriteStorage {
 
 export function loadState(storage: ReadStorage): GameState {
   const raw = storage.getItem(SAVE_KEY);
-  if (!raw) {
-    const legacy = loadLegacyPreviewMigration(storage);
-    return legacy?.state ?? createInitialState();
-  }
+  if (!raw) return createInitialState();
   try {
     const parsed: unknown = JSON.parse(raw);
     return normalizePersistedGameState(parsed) ?? createInitialState();

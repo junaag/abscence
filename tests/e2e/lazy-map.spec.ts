@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('map JavaScript stays off the startup path until the player opens Carte', async ({ page }) => {
+test('Zone Alpha map JavaScript stays off the startup path until the player opens Carte', async ({ page }) => {
   const mapChunkRequests: string[] = [];
   page.on('request', (request) => {
     const url = request.url();
@@ -14,7 +14,7 @@ test('map JavaScript stays off the startup path until the player opens Carte', a
   expect(mapChunkRequests).toEqual([]);
 
   await page.getByRole('button', { name: /Carte/u }).click();
-  await expect(page.getByTestId('leaflet-map')).toBeVisible();
+  await expect(page.getByTestId('zone-alpha-map')).toBeVisible();
   await expect.poll(() => mapChunkRequests.length).toBeGreaterThan(0);
 
   const uniqueMapChunks = new Set(mapChunkRequests.map((url) => new URL(url).pathname));
@@ -22,7 +22,7 @@ test('map JavaScript stays off the startup path until the player opens Carte', a
 
   await page.getByRole('button', { name: /Accueil/u }).click();
   await page.getByRole('button', { name: /Carte/u }).click();
-  await expect(page.getByTestId('leaflet-map')).toBeVisible();
+  await expect(page.getByTestId('zone-alpha-map')).toBeVisible();
   await page.waitForTimeout(100);
 
   expect(new Set(mapChunkRequests.map((url) => new URL(url).pathname)).size).toBe(1);

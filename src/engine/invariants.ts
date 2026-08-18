@@ -17,6 +17,7 @@ export function validateState(state: GameState): InvariantViolation[] {
   if (!Number.isInteger(state.engine.nextEffectId) || state.engine.nextEffectId < 1) errors.push(violation('NEXT_EFFECT_ID_INVALID', `nextEffectId must be a positive integer, got ${state.engine.nextEffectId}.`));
   if (state.engine.worldEventSeed !== undefined && !Number.isFinite(state.engine.worldEventSeed)) errors.push(violation('WORLD_EVENT_SEED_INVALID', 'World event seed must be finite.'));
   for (const [key, value] of Object.entries(state.player.needs) as Array<[keyof NeedsState, number]>) if (!isPercent(value)) errors.push(violation('NEED_OUT_OF_RANGE', `${key} must stay between 0 and 100, got ${value}.`));
+  if (state.player.baseCarryCapacity !== undefined && (!Number.isFinite(state.player.baseCarryCapacity) || state.player.baseCarryCapacity < 0)) errors.push(violation('CARRY_CAPACITY_INVALID', 'Base carry capacity must be non-negative.'));
   if (!isPercent(state.infrastructure.water.pressure * 100)) errors.push(violation('WATER_PRESSURE_INVALID', 'Water pressure must stay between 0 and 1.'));
   if (!isPercent(state.infrastructure.electricity.voltagePercent)) errors.push(violation('VOLTAGE_INVALID', 'Electricity voltage must stay between 0 and 100 %.'));
   if (!Number.isFinite(state.infrastructure.mobile.signal) || state.infrastructure.mobile.signal < 0 || state.infrastructure.mobile.signal > 4) errors.push(violation('MOBILE_SIGNAL_INVALID', 'Mobile signal must stay between 0 and 4.'));
@@ -109,6 +110,13 @@ export function validateState(state: GameState): InvariantViolation[] {
 
   for (const locationId of Object.keys(state.world.windowsOpen)) if (!state.locations[locationId]) errors.push(violation('WINDOW_LOCATION_MISSING', `Window state points to missing location ${locationId}.`));
 
+  if (state.memory.locationVisitCounts) {
+    for (const [locationId, count] of Object.entries(state.memory.locationVisitCounts)) {
+      if (!state.locations[locationId]) errors.push(violation('VISIT_LOCATION_MISSING', `Visit memory points to missing location ${locationId}.`));
+      if (!Number.isInteger(count) || count < 1) errors.push(violation('VISIT_COUNT_INVALID', `${locationId} has invalid visit count ${count}.`));
+    }
+  }
+
   const inventorySeen = new Set<string>();
   for (const itemId of state.player.inventoryIds) {
     if (inventorySeen.has(itemId)) errors.push(violation('INVENTORY_DUPLICATE', `${itemId} appears more than once in inventory.`));
@@ -116,6 +124,22 @@ export function validateState(state: GameState): InvariantViolation[] {
     const item = state.items[itemId];
     if (!item) errors.push(violation('INVENTORY_ITEM_MISSING', `Inventory references missing item ${itemId}.`));
     else if (item.location.kind !== 'inventory') errors.push(violation('INVENTORY_LOCATION_MISMATCH', `${itemId} is listed in inventory but its location is ${item.location.kind}.`));
+  }
+
+  const equippedIds = new Set<string>();
+  const equipment = state.player.equipment;
+  if (equipment) {
+    for (const slot of ['back', 'waist'] as const) {
+      const itemId = equipment[slot];
+      if (!itemId) continue;
+      if (equippedIds.has(itemId)) errors.push(violation('EQUIPMENT_DUPLICATE', `${itemId} is equipped in multiple slots.`));
+      equippedIds.add(itemId);
+      const item = state.items[itemId];
+      const definition = item ? getItemDefinition(item.definitionId) : undefined;
+      if (!item) errors.push(violation('EQUIPMENT_ITEM_MISSING', `${slot} points to missing item ${itemId}.`));
+      else if (item.location.kind !== 'inventory') errors.push(violation('EQUIPMENT_NOT_CARRIED', `${itemId} is equipped but not in inventory.`));
+      if (!definition?.equipment || definition.equipment.slot !== slot) errors.push(violation('EQUIPMENT_SLOT_INVALID', `${itemId} cannot be equipped in ${slot}.`));
+    }
   }
 
   const containerMembership = new Map<string, string>();

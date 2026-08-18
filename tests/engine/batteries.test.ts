@@ -6,11 +6,17 @@ import { createInitialState } from '../../src/engine/state';
 import { advanceTime } from '../../src/engine/time';
 
 function addInventoryItem(state: GameState, item: ItemState): void { state.items[item.id] = item; state.player.inventoryIds.push(item.id); }
+function takePhone(state: GameState): GameState {
+  const transition = performAction(state, { id: 'TAKE_ITEM', targetId: 'phone_01' });
+  if (!transition.result.success) throw new Error('phone fixture could not be taken');
+  return transition.state;
+}
 
 describe('generic battery resources from engine v0.1.8', () => {
-  it('starts the smartphone at the historical 78% charge and spends 0.03% per use', () => {
-    const state = createInitialState();
+  it('starts the smartphone at the historical 78% charge and spends 0.03% per use after it is found', () => {
+    let state = createInitialState();
     expect(state.items.phone_01?.batteryPercent).toBe(78);
+    state = takePhone(state);
     const result = performAction(state, { id: 'USE_ITEM', targetId: 'phone_01' });
     expect(result.result.success).toBe(true);
     expect(result.result.elapsedSeconds).toBe(3);
@@ -18,7 +24,7 @@ describe('generic battery resources from engine v0.1.8', () => {
   });
 
   it('blocks use at 0% charge', () => {
-    const state = createInitialState();
+    const state = takePhone(createInitialState());
     if (!state.items.phone_01) throw new Error('missing phone');
     state.items.phone_01.batteryPercent = 0;
     const result = performAction(state, { id: 'USE_ITEM', targetId: 'phone_01' });
@@ -43,11 +49,12 @@ describe('generic battery resources from engine v0.1.8', () => {
     expect(result.state.items.flashlight_01?.batteryPercent).toBeLessThan(63.99);
   });
 
-  it('provides a fixed wall outlet in the playable kitchen', () => {
+  it('provides a fixed wall outlet in the playable kitchen without a redundant Examiner action', () => {
     let state = createInitialState();
     expect(state.items.outlet_01).toMatchObject({ definitionId: 'wall_outlet', location: { kind: 'location', id: 'kitchen' } });
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
-    expect(getItemActions(state, 'outlet_01').map((action) => action.id)).toEqual(['EXAMINE_ITEM']);
+    expect(getItemActions(state, 'outlet_01')).toEqual([]);
+    expect(describeItemExamination(state, 'outlet_01')).toContain('prise murale');
     const take = performAction(state, { id: 'TAKE_ITEM', targetId: 'outlet_01' });
     expect(take.result.success).toBe(false);
     expect(take.result.title).toBe('Objet fixe');
@@ -63,8 +70,8 @@ describe('generic battery resources from engine v0.1.8', () => {
     expect(describeItemExamination(state, 'outlet_01')).toContain('hors tension');
   });
 
-  it('charges a rechargeable item from the real kitchen outlet', () => {
-    let state = createInitialState();
+  it('charges a discovered rechargeable item from the real kitchen outlet', () => {
+    let state = takePhone(createInitialState());
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
     const actions = getItemActions(state, 'phone_01');
     const charge = actions.find((action) => action.id === 'CHARGE_ITEM');
@@ -76,7 +83,7 @@ describe('generic battery resources from engine v0.1.8', () => {
   });
 
   it('cannot charge when electricity is unavailable', () => {
-    let state = createInitialState();
+    let state = takePhone(createInitialState());
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
     state.infrastructure.electricity.available = false;
     state.infrastructure.electricity.voltagePercent = 0;
@@ -86,7 +93,7 @@ describe('generic battery resources from engine v0.1.8', () => {
   });
 
   it('interrupts a long recharge exactly when electricity goes off', () => {
-    let state = createInitialState();
+    let state = takePhone(createInitialState());
     state = performAction(state, { id: 'MOVE', targetId: 'kitchen' }).state;
     state.infrastructure.transitions = [{
       id: 'power_off_during_charge',

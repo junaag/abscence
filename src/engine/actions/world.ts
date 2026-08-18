@@ -82,7 +82,7 @@ export function shoutForWife(state: GameState): EngineTransition {
   const next = cloneState(state);
   next.memory.shoutedForWife = true;
   advanceTime(next, 8);
-  return success(next, 'Votre voix traverse la maison.', 'Aucune réponse. Le silence qui suit paraît encore plus anormal.', 8);
+  return success(next, 'Vous appelez à haute voix.', 'Votre voix traverse la maison. Aucune réponse ne revient.', 8);
 }
 
 export function wait(state: GameState, seconds: number | undefined): EngineTransition {

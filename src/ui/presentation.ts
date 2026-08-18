@@ -4,14 +4,19 @@ import {
   currentLocation,
   describeItemExamination,
   formatClock,
+  getCarryCapacity,
+  getCarryLoad,
   getContainerActions,
   getContextActions,
   getItemActions,
   getMobileNetworkState,
+  getPhoneCapabilities,
   getWeatherState,
   inventoryItems,
+  isItemEquipped,
   looseItemsAtCurrentLocation,
   phoneCalls,
+  phoneContacts,
   phoneDeviceItemId,
   phoneMessages,
   type ActionOption,
@@ -65,6 +70,42 @@ function statValue(state: GameState, key: (typeof STAT_META)[number][0]): string
     : `${Math.round(state.player.needs[key])} %`;
 }
 
+function hasTimeSource(state: GameState): boolean {
+  return inventoryItems(state).some((item) => item.definitionId === 'smartphone' || item.definitionId === 'wristwatch');
+}
+
+function vagueTime(state: GameState): string {
+  const hour = state.clock.secondOfDay / 3600;
+  if (hour < 6) return 'Nuit';
+  if (hour < 10) return 'Début de matinée';
+  if (hour < 12) return 'Matinée';
+  if (hour < 14) return 'Milieu de journée';
+  if (hour < 18) return 'Après-midi';
+  if (hour < 21) return 'Soirée';
+  return 'Nuit';
+}
+
+function displayClock(state: GameState): string {
+  return hasTimeSource(state) ? formatClock(state) : vagueTime(state);
+}
+
+function itemIcon(definitionId: string): string {
+  switch (definitionId) {
+    case 'smartphone': return '📱';
+    case 'wristwatch': return '⌚';
+    case 'backpack': return '🎒';
+    case 'waist_bag': return '🧰';
+    case 'hiking_backpack': return '🎒';
+    case 'apple': return '🍎';
+    case 'water_bottle': return '💧';
+    case 'key': return '🔑';
+    case 'towel': return '🧻';
+    case 'flashlight': return '🔦';
+    case 'wall_outlet': return '🔌';
+    default: return '📦';
+  }
+}
+
 export function renderHud(state: GameState): string {
   const location = currentLocation(state);
   const stats = STAT_META.map(([key, icon, label, description]) => `
@@ -78,7 +119,7 @@ export function renderHud(state: GameState): string {
     <header class="hud" data-testid="hud">
       <div class="hud-top">
         <div>
-          <div class="clock">${formatClock(state)}</div>
+          <div class="clock">${escapeHtml(displayClock(state))}</div>
           <div class="place">${escapeHtml(location.name)}</div>
         </div>
         <button class="close" type="button" data-menu aria-label="Menu">☰</button>
@@ -140,7 +181,7 @@ export function renderHomeView(state: GameState, ui: UiState): string {
       container.name,
       container.open ? 'Ouvert' : container.locked ? 'Verrouillé' : 'Fermé',
     )),
-    ...looseItems.map((item) => objectRow('item', item.id, '📦', item.name, 'Objet à portée de main')),
+    ...looseItems.map((item) => objectRow('item', item.id, itemIcon(item.definitionId), item.name, 'Objet visible ici')),
   ].join('');
 
   return `
@@ -153,7 +194,7 @@ export function renderHomeView(state: GameState, ui: UiState): string {
       ${resultCard(ui.result)}
       <div class="section-title">Objets et contenants présents</div>
       ${objectRows || '<div class="empty">Aucun objet visible ici.</div>'}
-      <div class="section-title">Actions</div>
+      <div class="section-title">Actions possibles</div>
       ${actions.map(actionButton).join('')}
     </main>
   `;
@@ -161,16 +202,25 @@ export function renderHomeView(state: GameState, ui: UiState): string {
 
 export function renderInventoryView(state: GameState, ui: UiState): string {
   const items = inventoryItems(state);
+  const load = getCarryLoad(state);
+  const capacity = getCarryCapacity(state);
   const rows = items.length > 0
-    ? items.map((item) => objectRow('item', item.id, '🎒', item.name, item.examined ? 'Examiné' : 'Non examiné')).join('')
-    : '<div class="empty">Inventaire vide.</div>';
+    ? items.map((item) => objectRow(
+      'item',
+      item.id,
+      itemIcon(item.definitionId),
+      item.name,
+      isItemEquipped(state, item.id) ? 'Équipé' : 'Transporté',
+    )).join('')
+    : '<div class="empty">Vous ne transportez encore rien.</div>';
 
   return `
     <main data-testid="inventory-view">
       <section class="card">
         <div class="eyebrow">Inventaire</div>
         <h1>Objets transportés</h1>
-        <div class="copy">Les actions liées aux objets sont accessibles uniquement en touchant l’objet.</div>
+        <div class="inventory-capacity" data-testid="carry-capacity"><strong>${load.toFixed(1).replace('.0', '')}</strong> / ${capacity.toFixed(1).replace('.0', '')} capacité utilisée</div>
+        <div class="copy">Un sac équipé augmente la quantité de matériel que vous pouvez emporter.</div>
       </section>
       ${resultCard(ui.result)}
       ${rows}
@@ -199,7 +249,7 @@ function phoneHome(): string {
       <button type="button" class="phone-app" data-phone-tab="weather"><span class="phone-app-icon">☁</span><span>Météo</span></button>
       <div class="phone-app phone-app-disabled" aria-disabled="true"><span class="phone-app-icon">⚙</span><span>Réglages</span><small>À reconnecter</small></div>
     </div>
-    <div class="phone-note">L’historique et la météo du monde enregistrés sur l’appareil restent consultables même sans réseau.</div>
+    <div class="phone-note">Les informations enregistrées sur l’appareil restent consultables tant que sa batterie fonctionne. Les communications dépendent du réseau.</div>
   `;
 }
 
@@ -209,6 +259,24 @@ function phoneHistory(title: string, entries: ReadonlyArray<{ name: string; meta
     <div class="phone-title">${escapeHtml(title)}</div>
     <div class="phone-history">${entries.map((entry) => phoneContact(entry.name, entry.meta)).join('')}</div>
   `;
+}
+
+function phoneCommunicationActions(state: GameState, kind: 'call' | 'sms'): string {
+  const capabilities = getPhoneCapabilities(state);
+  const allowed = kind === 'call' ? capabilities.canPlaceCall : capabilities.canSendSms;
+  if (!allowed) {
+    return `<div class="phone-note">${kind === 'call' ? 'Appels' : 'SMS'} indisponibles : batterie ou réseau insuffisant.</div>`;
+  }
+
+  const actionId = kind === 'call' ? 'CALL_CONTACT' : 'SEND_SMS_CONTACT';
+  const actions: ActionOption[] = phoneContacts().map((contact) => ({
+    id: actionId,
+    targetId: contact.id,
+    label: kind === 'call' ? `Appeler ${contact.name}` : `Envoyer « Où êtes-vous ? » à ${contact.name}`,
+    detail: kind === 'call' ? 'L’appel consomme du temps et un peu de batterie.' : 'Message court envoyé sur le réseau mobile.',
+  }));
+
+  return `<div class="section-title">Contacts retrouvés</div>${actions.map(actionButton).join('')}`;
 }
 
 function phoneWeather(state: GameState): string {
@@ -229,13 +297,17 @@ function phoneWeather(state: GameState): string {
         <div class="phone-weather-stat"><span>Humidité</span><strong>${Math.round(weather.humidityPct)} %</strong></div>
         <div class="phone-weather-stat"><span>Vent</span><strong>${weather.windKph.toFixed(1).replace('.0', '')} km/h</strong></div>
         <div class="phone-weather-stat"><span>Précipitations</span><strong>${weather.precipitationMmPerHour.toFixed(1).replace('.0', '')} mm/h</strong></div>
-        <div class="phone-weather-stat"><span>Source</span><strong>Monde simulé</strong></div>
+        <div class="phone-weather-stat"><span>Source</span><strong>Appareil</strong></div>
       </div>
     </div>
   `;
 }
 
 export function renderPhoneView(state: GameState, ui: UiState): string {
+  const capabilities = getPhoneCapabilities(state);
+  if (!capabilities.devicePresent) {
+    return '<main data-testid="phone-view"><section class="card"><h1>Aucun téléphone</h1><div class="copy">Vous ne transportez aucun téléphone.</div></section></main>';
+  }
   const phone = state.items[phoneDeviceItemId(state)];
   const battery = phone?.batteryPercent;
   const mobile = getMobileNetworkState(state);
@@ -246,9 +318,9 @@ export function renderPhoneView(state: GameState, ui: UiState): string {
     meta: `${message.preview} · ${message.displayTime}`,
   }));
   const content = ui.phoneTab === 'calls'
-    ? phoneHistory('Appels récents', calls)
+    ? `${phoneHistory('Appels récents', calls)}${phoneCommunicationActions(state, 'call')}`
     : ui.phoneTab === 'messages'
-      ? phoneHistory('Messages', messages)
+      ? `${phoneHistory('Messages', messages)}${phoneCommunicationActions(state, 'sms')}`
       : ui.phoneTab === 'weather'
         ? phoneWeather(state)
         : phoneHome();
@@ -260,24 +332,26 @@ export function renderPhoneView(state: GameState, ui: UiState): string {
           <span>${formatClock(state)}</span>
           <span>${battery === undefined ? 'Batterie ?' : `Batterie ${battery.toFixed(1).replace('.0', '')} %`} · ${network}</span>
         </div>
+        ${resultCard(ui.result)}
         ${content}
       </section>
     </main>
   `;
 }
 
-export function renderMapView(): string {
-  return '<main class="map-main" data-testid="map-view"><div class="map-shell" data-map-slot></div></main>';
+export function renderMapView(ui: UiState): string {
+  const feedback = ui.result ? `<div class="map-result">${resultCard(ui.result)}</div>` : '';
+  return `<main class="map-main" data-testid="map-view">${feedback}<div class="map-shell" data-map-slot></div></main>`;
 }
 
-export function renderNavigation(view: ViewId): string {
+export function renderNavigation(view: ViewId, state: GameState): string {
   const entries: Array<[ViewId, string, string]> = [
     ['home', '🏠', 'Accueil'],
     ['map', '🗺️', 'Carte'],
     ['inventory', '🎒', 'Inventaire'],
-    ['phone', '📱', 'Téléphone'],
   ];
-  return `<nav>${entries.map(([id, icon, label]) => `
+  if (getPhoneCapabilities(state).devicePresent) entries.push(['phone', '📱', 'Téléphone']);
+  return `<nav style="grid-template-columns:repeat(${entries.length},1fr)">${entries.map(([id, icon, label]) => `
     <button type="button" class="nav${view === id ? ' active' : ''}" data-nav="${id}">
       <span>${icon}</span>${label}
     </button>
@@ -294,7 +368,7 @@ export function renderTargetPopup(state: GameState, ui: UiState): string {
     const actions = getContainerActions(state, container.id);
     const contents = containerContents(state, container.id);
     const contentRows = contents.length > 0
-      ? contents.map((item) => objectRow('item', item.id, '📦', item.name, 'Dans le contenant')).join('')
+      ? contents.map((item) => objectRow('item', item.id, itemIcon(item.definitionId), item.name, 'Dans le contenant')).join('')
       : '<div class="empty">Ce contenant est vide.</div>';
 
     return `
@@ -317,9 +391,7 @@ export function renderTargetPopup(state: GameState, ui: UiState): string {
   const item = state.items[target.id];
   if (!item) return '';
   const actions = getItemActions(state, item.id);
-  const details = item.examined
-    ? describeItemExamination(state, item.id)
-    : 'Touchez « Examiner » pour découvrir son rôle, son fonctionnement et son état.';
+  const details = describeItemExamination(state, item.id);
 
   return `
     <div class="overlay">

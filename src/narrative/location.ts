@@ -1,6 +1,7 @@
 import { activeEffectsAt } from '../engine/effects';
 import { isElectricityAvailable, isWaterAvailable } from '../engine/infrastructure';
 import type { GameState, ItemState, PersistentEffect } from '../engine/model';
+import { getActivePoiZone, poiZones } from '../engine/poi-sites';
 import { currentLocation, looseItemsAtCurrentLocation } from '../engine/selectors';
 
 function joinFrench(items: string[]): string {
@@ -17,66 +18,116 @@ function describeEffect(effect: PersistentEffect): string {
   if (effect.type === 'water_puddle') return effect.intensity >= 55 ? 'De l’eau s’étend franchement sur le sol.' : 'Une zone humide marque le sol.';
   if (effect.type === 'smoke') return effect.intensity >= 65 ? 'Une fumée épaisse rend l’air agressif.' : 'Une odeur de fumée flotte dans l’air.';
   if (effect.type === 'fire') return effect.intensity >= 75 ? 'Un feu violent gagne du terrain.' : 'Un départ de feu est actif ici.';
-  return effect.intensity >= 35 ? 'Un bruit continu finit par devenir difficile à ignorer.' : 'Un bruit de fond persistant reste perceptible.';
+  return effect.intensity >= 35 ? 'Un bruit continu finit par remplir tout l’espace.' : 'Un bruit de fond persistant reste perceptible.';
 }
 
-function describeKnownLocation(state: GameState, locationId: string): string | undefined {
-  switch (locationId) {
-    case 'hallway':
-      return 'Le couloir dessert les autres pièces de la maison. Les portes sont là, les affaires aussi, mais aucune voix ne vient rompre le silence.';
-    case 'girls_room':
-      return 'La chambre paraît avoir été quittée normalement la veille. Les lits, les vêtements et les petits objets du quotidien sont toujours là. Vos filles, elles, ont disparu.';
-    case 'bathroom':
-      return isWaterAvailable(state)
-        ? 'Tout semble banal. Le miroir, les serviettes, les produits de toilette. L’eau coule encore au robinet, comme si rien ne s’était passé.'
-        : 'Tout semble banal, sauf le robinet : aucune eau ne sort lorsque vous l’ouvrez.';
-    case 'living_room':
-      return isElectricityAvailable(state)
-        ? 'Le salon est intact. Quelques appareils restent alimentés, mais aucun son humain ne vient de la rue ni des maisons voisines.'
-        : 'Le salon est plongé dans un calme lourd. Les appareils sont éteints et la rue, derrière les fenêtres, paraît anormalement immobile.';
-    case 'garage':
-      return 'L’odeur familière du garage contraste avec le silence extérieur. Outils, rangements et véhicule semblent avoir été abandonnés en plein quotidien.';
-    case 'driveway':
-      return 'Vous êtes maintenant devant la maison. Rien ne bouge dans les propriétés voisines. Des voitures sont garées, mais personne ne les rejoint.';
-    case 'home_street':
-      return 'La rue résidentielle est déserte. Volets ouverts, véhicules stationnés, poubelles et vélos donnent l’impression d’un matin ordinaire auquel il manquerait seulement tous les habitants.';
-    case 'neighbor_front':
-      return 'La maison voisine paraît intacte. Aucun appel, aucune sonnerie et aucun mouvement derrière les fenêtres ne provoquent de réaction.';
-    case 'bus_stop':
-      return 'L’arrêt de bus est vide. Aucun véhicule n’arrive, aucun moteur ne se fait entendre. Les horaires affichés semblent soudain appartenir à un monde qui ne fonctionne plus.';
-    case 'small_park':
-      return 'Le petit parc est entièrement vide. Le vent fait légèrement bouger la végétation et le mobilier, seul mouvement visible dans les environs.';
-    case 'crossroads':
-      return 'Le carrefour offre une première vue plus large du quartier. Plusieurs commerces sont visibles, mais aucune circulation et aucun piéton ne traversent les rues.';
-    case 'pharmacy_front':
-      return 'La pharmacie est fermée, mais la devanture semble intacte. À travers la vitre, les rayonnages sont encore en place.';
-    case 'grocery_front':
-      return 'La supérette paraît avoir fermé sans préparation particulière. Des produits sont encore visibles à travers la façade, mais personne ne répond à l’intérieur.';
-    default:
-      return undefined;
-  }
+function persistentSilence(state: GameState): string {
+  const minutes = Math.floor(state.engine.elapsedSeconds / 60);
+  if (minutes < 15) return '';
+  if (minutes < 35) return ' Le silence extérieur s’est prolongé sans être interrompu par une voix, un moteur ou des pas.';
+  return ' Le temps s’accumule et l’absence de voix humaines devient une présence en soi, régulière, presque matérielle.';
+}
+
+function visitCount(state: GameState, locationId: string): number {
+  return state.memory.locationVisitCounts?.[locationId]
+    ?? (state.memory.visitedLocationIds.includes(locationId) ? 1 : 0);
+}
+
+/**
+ * Kept as an API compatibility point, but the situation panel no longer gives
+ * the player a recommended next action. Exploration must remain self-directed.
+ */
+export function describeImmediateConcern(state: GameState): string {
+  void state;
+  return '';
 }
 
 export function describeCurrentLocation(state: GameState): string {
   const location = currentLocation(state);
   const items = visibleNames(looseItemsAtCurrentLocation(state));
-  const effectText = activeEffectsAt(state, location.id).map(describeEffect).join(' ');
+  const effects = activeEffectsAt(state, location.id).map(describeEffect).join(' ');
+  const firstVisit = visitCount(state, location.id) <= 1;
   let base: string;
 
   if (location.id === 'bedroom') {
-    const first = 'La place à côté de vous est vide. Aucun bruit de circulation ne traverse la maison.';
-    base = state.memory.shoutedForWife ? `${first} Vous avez appelé votre épouse, sans obtenir la moindre réponse.` : `${first} Le silence est suffisamment inhabituel pour attirer votre attention.`;
+    if (firstVisit) {
+      base = 'Le réveil est brutal. Vous ouvrez les yeux avec le souffle court, encore allongé dans un lit dont les draps sont froissés autour de vous. Il ne reste qu’une image avant cet instant : un flash d’une blancheur violente, sans forme ni durée. Après lui, rien. Aucun nom ne remonte. Aucun visage. Aucun souvenir de la veille, de cette chambre ou de la raison pour laquelle vous êtes ici. La lumière du matin passe en bandes pâles entre les volets. Le mobilier, les vêtements, les objets autour de vous devraient peut-être signifier quelque chose ; ils ne provoquent qu’une impression de familiarité inaccessible.';
+      if (items.length > 0) base += ` À portée de main, vous distinguez ${joinFrench(items)}.`;
+      base += state.memory.shoutedForWife
+        ? ' Votre appel a traversé la maison. Aucune voix ne lui a répondu.'
+        : ' Au-delà de la pièce, la maison ne laisse entendre aucun mouvement.';
+    } else {
+      base = 'Vous retrouvez la chambre et ses détails désormais connus : les draps défaits, la lumière filtrée par les volets, le même silence derrière la porte. Le souvenir du flash n’a pas gagné en netteté.';
+    }
   } else if (location.id === 'kitchen') {
-    const parts: string[] = [];
-    parts.push(isElectricityAvailable(state) ? 'Le réfrigérateur ronronne encore.' : 'Le réfrigérateur est silencieux : le courant est coupé.');
-    parts.push(items.length > 0 ? `À portée de main : ${joinFrench(items)}.` : 'Le plan de travail est presque vide.');
-    parts.push(isWaterAvailable(state) ? 'Le robinet fonctionne encore.' : 'Lorsque vous ouvrez le robinet, rien ne coule.');
-    base = parts.join(' ');
+    if (firstVisit) {
+      const parts: string[] = [];
+      parts.push('La cuisine a l’apparence banale d’un lieu quitté au milieu d’une journée ordinaire, mais rien ici ne déclenche de souvenir précis.');
+      parts.push(isElectricityAvailable(state) ? 'Le réfrigérateur ronronne doucement, un bruit presque disproportionné dans le calme de la maison.' : 'Le réfrigérateur est silencieux ; aucun appareil électrique ne semble fonctionner.');
+      if (items.length > 0) parts.push(`Plusieurs choses restent visibles : ${joinFrench(items)}.`);
+      parts.push(isWaterAvailable(state) ? 'Lorsque le robinet est sollicité, l’eau est encore sous pression.' : 'Le robinet ne donne plus d’eau.');
+      base = parts.join(' ');
+    } else {
+      base = `La cuisine est telle que vous l’avez déjà vue. ${isElectricityAvailable(state) ? 'Le réfrigérateur continue de vibrer faiblement.' : 'Les appareils restent muets.'}`;
+      if (items.length > 0) base += ` Il reste ici ${joinFrench(items)}.`;
+    }
   } else if (location.id === 'garden') {
-    base = 'Le jardin est calme. Aucun mouvement humain, aucune voix, aucun moteur au loin.';
+    base = firstVisit
+      ? 'L’air extérieur vous saisit immédiatement. Le jardin porte les traces ordinaires d’une habitation — végétation, clôture, mobilier — sans que rien ne vous revienne. Plus loin, aucune conversation, aucune portière, aucun moteur. Un oiseau traverse brièvement le silence puis disparaît derrière les toits.'
+      : 'Le jardin n’a presque pas changé. Le vent déplace légèrement les feuilles et, au-delà de la clôture, le quartier reste étrangement calme.';
+  } else if (location.id === 'street') {
+    base = firstVisit
+      ? 'Vous passez au-delà de la propriété. La rue s’étire entre des façades et des véhicules stationnés comme un décor intact après le départ de ses occupants. Rien n’est détruit. Rien n’annonce une catastrophe. Pourtant personne ne marche sur les trottoirs, aucune voiture ne passe, aucune silhouette n’apparaît derrière une fenêtre. Les sons qui restent — vent, oiseaux, un volet qui bouge quelque part — rendent l’absence humaine plus nette encore.'
+      : 'Vous retrouvez la rue silencieuse. Les voitures sont toujours immobiles, les fenêtres toujours vides, et seuls les petits bruits du quartier sans habitants viennent rompre le calme.';
+  } else if (location.id === 'map_walk_position') {
+    base = firstVisit
+      ? 'Vous avancez dans les rues du quartier. À chaque portion parcourue, quelques façades et intersections nouvelles émergent de ce que vous ne connaissiez pas encore.'
+      : 'Vous continuez à pied dans le quartier, en laissant derrière vous les portions de rue déjà parcourues.';
+  } else if (location.poiSite) {
+    const site = location.poiSite;
+    if (site.phase === 'outside') {
+      if (!site.observed) {
+        base = firstVisit
+          ? `Vous arrivez devant ${location.name}. De l’extérieur, le lieu paraît intact mais désert. Les accès, les vitrages et les objets visibles derrière les ouvertures restent difficiles à lire d’un simple coup d’œil. Aucun mouvement humain ne vient rompre le calme.`
+          : `Vous revenez devant ${location.name}. Le bâtiment est toujours silencieux et ses abords n’ont visiblement pas changé.`;
+      } else {
+        base = `Vous restez devant ${location.name}. Après avoir observé les abords, vous distinguez mieux l’organisation générale du lieu.`;
+        if (site.entranceLocked) base += ' L’accès principal est toujours verrouillé.';
+        else if (site.entranceForced) base += ' L’accès que vous avez forcé reste ouvert.';
+        else base += ' L’accès principal paraît praticable.';
+      }
+    } else {
+      const zone = getActivePoiZone(site);
+      const totalZones = poiZones(site).length;
+      if (!zone) {
+        base = `Vous êtes à l’intérieur de ${location.name}. Le lieu reste silencieux et son organisation intérieure demande encore à être comprise.`;
+      } else {
+        base = `Vous êtes dans ${zone.name.toLowerCase()}, à l’intérieur de ${location.name}.`;
+        if (!zone.searched) {
+          base += ' Ce que vous voyez ici correspond seulement à ce qu’un regard rapide permet de repérer ; les rangements, recoins et surfaces moins évidentes n’ont pas encore été fouillés méthodiquement.';
+        } else {
+          base += ' Vous avez déjà pris le temps d’inspecter méthodiquement cette zone.';
+        }
+        if (items.length > 0) base += ` Restent visibles ici : ${joinFrench(items)}.`;
+        if (zone.risk?.discovered && !zone.risk.resolved) {
+          base += ` ${zone.risk.description}`;
+        } else if (zone.risk?.triggered) {
+          base += ' Le danger que vous aviez rencontré ici ne vous surprendra plus de la même manière.';
+        }
+        if (zone.clue?.discovered) base += ` Un détail continue de vous revenir : ${zone.clue.text}`;
+        if (totalZones > 1) {
+          const searchedCount = poiZones(site).filter((entry) => entry.searched).length;
+          base += ` Vous avez fouillé ${searchedCount} zone${searchedCount > 1 ? 's' : ''} sur ${totalZones}.`;
+        }
+      }
+    }
   } else {
-    base = describeKnownLocation(state, location.id) ?? `Vous vous trouvez dans ${location.name.toLowerCase()}.`;
+    base = firstVisit
+      ? `Vous arrivez devant ${location.name}. Le lieu est silencieux et rien, de l’extérieur, ne permet encore de savoir ce qui s’est passé ici.`
+      : `Vous revenez à ${location.name}. Les repères sont désormais familiers, même si le lieu reste privé de présence humaine.`;
   }
 
-  return effectText ? `${base} ${effectText}` : base;
+  const silence = persistentSilence(state);
+  const scene = `${base}${silence}`;
+  return effects ? `${scene} ${effects}` : scene;
 }

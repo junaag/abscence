@@ -13,11 +13,18 @@ export interface NeedsState {
   pain: number;
 }
 
+export interface EquipmentState {
+  back: ItemId | null;
+  waist: ItemId | null;
+}
+
 export interface PlayerState {
   locationId: LocationId;
   healthPv: number;
   needs: NeedsState;
   inventoryIds: ItemId[];
+  baseCarryCapacity?: number;
+  equipment?: EquipmentState;
   alive: boolean;
 }
 
@@ -41,6 +48,61 @@ export interface LocationFeatures {
   powerOutlet?: boolean;
 }
 
+export type PoiSitePhase = 'outside' | 'inside';
+export type PoiSiteCategory = 'Industrie' | 'Commerce' | 'Santé' | 'Automobile' | 'Services publics' | 'Résidentiel' | 'Inconnu';
+export type PoiRiskKind = 'debris' | 'unstable_storage' | 'chemical' | 'electrical' | 'darkness';
+
+export interface PoiRiskState {
+  id: string;
+  kind: PoiRiskKind;
+  label: string;
+  description: string;
+  discovered: boolean;
+  resolved: boolean;
+  triggered: boolean;
+  secureSeconds: number;
+  painPenalty: number;
+  fatiguePenalty: number;
+  stressPenalty: number;
+}
+
+export interface PoiClueState {
+  id: string;
+  text: string;
+  discovered: boolean;
+}
+
+export interface PoiZoneState {
+  id: string;
+  name: string;
+  locked: boolean;
+  discovered: boolean;
+  surfaceRevealed: boolean;
+  searched: boolean;
+  searchSeconds?: number;
+  searchProgressSeconds?: number;
+  hidden?: boolean;
+  revealsZoneId?: string;
+  surfaceLootIds?: string[];
+  deepLootIds?: string[];
+  risk?: PoiRiskState;
+  clue?: PoiClueState;
+}
+
+export interface PoiSiteState {
+  sourceId: string;
+  category?: PoiSiteCategory | undefined;
+  typeLabel?: string;
+  phase: PoiSitePhase;
+  observed: boolean;
+  entranceLocked?: boolean;
+  entranceForced?: boolean;
+  surfaceRevealed?: boolean;
+  searched: boolean;
+  activeZoneId?: string;
+  zones?: PoiZoneState[];
+}
+
 export type WorldPosition =
   | { x: number; y: number }
   | { lat: number; lon: number };
@@ -53,6 +115,7 @@ export interface LocationState {
   ventilation: number;
   features: LocationFeatures;
   position?: WorldPosition;
+  poiSite?: PoiSiteState;
 }
 
 export interface ConnectionState {
@@ -64,7 +127,6 @@ export interface ConnectionState {
   locked: boolean;
   openSeconds: number;
   travelSeconds: number;
-  hiddenFromContext?: boolean;
 }
 
 export interface ContainerState {
@@ -89,6 +151,7 @@ export interface ItemState {
   name: string;
   location: ItemLocation;
   examined: boolean;
+  poiZoneId?: string;
   liquidMl?: number;
   capacityMl?: number;
   batteryPercent?: number;
@@ -240,6 +303,7 @@ export interface PhoneState {
 export interface MemoryState {
   shoutedForWife: boolean;
   visitedLocationIds: LocationId[];
+  locationVisitCounts?: Record<LocationId, number>;
 }
 
 export interface GameState {
@@ -260,6 +324,16 @@ export interface GameState {
 
 export type ActionId =
   | 'MOVE'
+  | 'TRAVEL_TO_MAP_POI'
+  | 'WALK_TO_MAP_POINT'
+  | 'OBSERVE_LOCATION'
+  | 'FORCE_POI_ACCESS'
+  | 'ENTER_POI'
+  | 'MOVE_POI_ZONE'
+  | 'FORCE_POI_ZONE'
+  | 'SECURE_POI_RISK'
+  | 'SEARCH_LOCATION'
+  | 'LEAVE_POI'
   | 'OPEN_CONNECTION'
   | 'OPEN_CONTAINER'
   | 'TAKE_ITEM'
@@ -268,8 +342,12 @@ export type ActionId =
   | 'DRINK_TAP'
   | 'FILL_LIQUID_CONTAINER'
   | 'USE_ITEM'
+  | 'EQUIP_ITEM'
+  | 'UNEQUIP_ITEM'
   | 'CHARGE_ITEM'
   | 'EXAMINE_ITEM'
+  | 'CALL_CONTACT'
+  | 'SEND_SMS_CONTACT'
   | 'MOP_EFFECT'
   | 'VENTILATE_EFFECT'
   | 'DOUSE_EFFECT'

@@ -29,7 +29,7 @@ describe('public engine facade contract', () => {
   });
 
   it('exports the persistence keys needed by the application boundary', () => {
-    expect(engine.SAVE_KEY).toBe('absence-v020-dev');
+    expect(engine.SAVE_KEY).toBe('absence-v030-zone-alpha-r1');
     expect(engine.LEGACY_PREVIEW_SAVE_KEYS).toEqual(['absence-preview-v0111', 'absence-preview-v019']);
   });
 });

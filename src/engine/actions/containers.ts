@@ -9,11 +9,17 @@ export function openContainer(state: GameState, containerId: string | undefined)
   const container = state.containers[containerId];
   if (!container || container.locationId !== state.player.locationId) return failure(state, 'Impossible', 'Ce contenant n’est pas accessible ici.');
   if (container.locked) return failure(state, 'Verrouillé', 'Le contenant est verrouillé.');
-  if (container.open) return failure(state, 'Déjà ouvert', 'Le contenant est déjà ouvert.');
 
   const next = cloneState(state);
   const nextContainer = next.containers[containerId];
   if (!nextContainer) return failure(state, 'Impossible', 'Le contenant a disparu.');
+
+  if (container.open) {
+    nextContainer.open = false;
+    advanceTime(next, 1);
+    return success(next, `Vous refermez ${container.name.toLowerCase()}.`, 'Le contenant est maintenant fermé.', 1);
+  }
+
   nextContainer.open = true;
   advanceTime(next, 2);
   const count = containerContents(next, containerId).length;

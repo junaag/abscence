@@ -1,4 +1,4 @@
-import { LEGACY_PREVIEW_SAVE_KEYS, loadLegacyPreviewMigration, loadState, saveState, SAVE_KEY, type GameState } from '../engine';
+import { loadState, saveState, type GameState } from '../engine';
 import { loadMapUiState, saveMapUiState, type MapUiState } from './map-state';
 import { loadUiPreferences, saveUiPreferences, type UiPreferences } from './preferences';
 
@@ -56,19 +56,6 @@ function persistSafely(operation: () => void): boolean {
   }
 }
 
-function loadGameState(storage: GuardedBrowserStorage, persist: (operation: () => void) => boolean): GameState {
-  if (storage.getItem(SAVE_KEY)) return loadState(storage);
-
-  const hasHistoricalCandidate = LEGACY_PREVIEW_SAVE_KEYS.some((key) => storage.getItem(key) !== null);
-  if (!hasHistoricalCandidate) return loadState(storage);
-
-  const migration = loadLegacyPreviewMigration(storage);
-  if (!migration) return loadState(storage);
-
-  persist(() => saveState(migration.state, storage));
-  return migration.state;
-}
-
 export function createBrowserPersistence(storage: Storage): GamePersistence {
   let storageFailure = false;
   const reportFailure = (): void => { storageFailure = true; };
@@ -76,7 +63,7 @@ export function createBrowserPersistence(storage: Storage): GamePersistence {
   const persist = (operation: () => void): boolean => persistSafely(operation);
 
   return {
-    load: () => loadGameState(guardedStorage, persist),
+    load: () => loadState(guardedStorage),
     save: (state) => persist(() => saveState(state, guardedStorage)),
     loadPreferences: () => loadUiPreferences(guardedStorage),
     savePreferences: (preferences) => persist(() => saveUiPreferences(preferences, guardedStorage)),

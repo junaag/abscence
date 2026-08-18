@@ -19,12 +19,19 @@ function activeEvent(definitionId: WorldEventDefinitionId, overrides: Partial<Wo
   };
 }
 
+function bedroomLocalPosition() {
+  const position = createInitialState().locations.bedroom?.position;
+  if (!position || !('x' in position) || !('y' in position)) throw new Error('missing Zone Alpha bedroom position');
+  return position;
+}
+
 describe('historical world-event perception', () => {
   it('uses local metric positions and exposes only channels within range', () => {
     const state = createInitialState();
+    const bedroom = bedroomLocalPosition();
     const garden = state.locations.garden;
     if (!garden) throw new Error('missing garden');
-    garden.position = { x: 120, y: 0 };
+    garden.position = { x: bedroom.x + 120, y: bedroom.y };
     const event = activeEvent('animal_noise', { id: 'animal_event', locationId: 'garden' });
 
     const perception = getWorldEventPerception(state, event, 'bedroom');
@@ -57,7 +64,8 @@ describe('historical world-event perception', () => {
 
   it('restores smoke visual and smell channels with linear strength', () => {
     const state = createInitialState();
-    const event = activeEvent('smoke_plume', { id: 'smoke_event', position: { x: 200, y: 0 } });
+    const bedroom = bedroomLocalPosition();
+    const event = activeEvent('smoke_plume', { id: 'smoke_event', position: { x: bedroom.x + 200, y: bedroom.y } });
     const perception = getWorldEventPerception(state, event, 'bedroom');
 
     expect(perception?.distanceM).toBe(200);
@@ -69,16 +77,18 @@ describe('historical world-event perception', () => {
 
   it('does not reveal resolved or out-of-range events', () => {
     const state = createInitialState();
+    const bedroom = bedroomLocalPosition();
     const resolved = activeEvent('security_alarm', { status: 'resolved', locationId: 'kitchen' });
-    const remoteNoise = activeEvent('unattended_noise', { position: { x: 181, y: 0 } });
+    const remoteNoise = activeEvent('unattended_noise', { position: { x: bedroom.x + 181, y: bedroom.y } });
     expect(getWorldEventPerception(state, resolved, 'bedroom')).toBeNull();
     expect(getWorldEventPerception(state, remoteNoise, 'bedroom')).toBeNull();
   });
 
   it('sorts perceived events by distance and can mark them discovered', () => {
     const state = createInitialState();
-    const near = activeEvent('unattended_noise', { id: 'near', position: { x: 90, y: 0 } });
-    const far = activeEvent('smoke_plume', { id: 'far', position: { x: 800, y: 0 } });
+    const bedroom = bedroomLocalPosition();
+    const near = activeEvent('unattended_noise', { id: 'near', position: { x: bedroom.x + 90, y: bedroom.y } });
+    const far = activeEvent('smoke_plume', { id: 'far', position: { x: bedroom.x + 800, y: bedroom.y } });
     state.world.events = [far, near];
 
     const perceptions = getPerceivedWorldEvents(state, 'bedroom', { markDiscovered: true });
