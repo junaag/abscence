@@ -1,7 +1,6 @@
 import { ZONE_ALPHA_BOUNDS, ZONE_ALPHA_HOME_POSITION } from '../content/zone-alpha-core';
 
 export const MAP_STATE_KEY = 'absence-v030-map-state-zone-alpha-r1';
-export const DEFAULT_HOME_COORDINATES = Object.freeze({ ...ZONE_ALPHA_HOME_POSITION });
 
 export interface MapCoordinate {
   x: number;
@@ -72,9 +71,9 @@ function normalizeCorridor(value: unknown): ExploredMapCorridor | null {
 
 export function createDefaultMapUiState(): MapUiState {
   return {
-    center: { ...DEFAULT_HOME_COORDINATES },
+    center: { ...ZONE_ALPHA_HOME_POSITION },
     zoom: 1.35,
-    explored: [{ ...DEFAULT_HOME_COORDINATES, radiusM: 18 }],
+    explored: [{ ...ZONE_ALPHA_HOME_POSITION, radiusM: 18 }],
     exploredCorridors: [],
   };
 }
