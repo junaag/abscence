@@ -2,7 +2,7 @@ import { getItemDefinition } from '../../content/items';
 import { scalePhysicalDuration } from '../encumbrance';
 import { activeEffectsAt } from '../effects';
 import type { ActionOption, GameState, ItemState } from '../model';
-import { getActivePoiZone, poiZones } from '../poi-sites';
+import { discoveredPoiZones, getActivePoiZone, getPoiZoneSearchProgressSeconds, getPoiZoneSearchRemainingSeconds, getPoiZoneSearchSeconds } from '../poi-sites';
 import { WATER_RULES } from '../rules';
 import {
   connectedDestinations,
@@ -30,6 +30,17 @@ function durationLabel(seconds: number): string {
 
 function carriesCrowbar(state: GameState): boolean {
   return inventoryItems(state).some((item) => item.definitionId === 'crowbar');
+}
+
+function searchDetail(state: GameState, active: NonNullable<ReturnType<typeof getActivePoiZone>>): string {
+  const total = getPoiZoneSearchSeconds(active);
+  const progress = getPoiZoneSearchProgressSeconds(active);
+  const remaining = getPoiZoneSearchRemainingSeconds(active);
+  const nextChunk = Math.min(15 * 60, remaining);
+  const actualChunk = scalePhysicalDuration(state, nextChunk, 'action');
+  const progressMin = Math.round(progress / 60);
+  const totalMin = Math.round(total / 60);
+  return `${durationLabel(actualChunk)} maintenant · ${progressMin}/${totalMin} min`;
 }
 
 export function getContextActions(state: GameState): ActionOption[] {
@@ -62,10 +73,15 @@ export function getContextActions(state: GameState): ActionOption[] {
         actions.push({ id: 'SECURE_POI_RISK', label: 'Sécuriser la zone', detail: `${active.risk.label} · ${durationLabel(scalePhysicalDuration(state, active.risk.secureSeconds, 'action'))}` });
       }
       if (active && !active.searched) {
-        actions.push({ id: 'SEARCH_LOCATION', label: `Fouiller ${active.name.toLowerCase()} méthodiquement`, detail: durationLabel(scalePhysicalDuration(state, 720, 'action')) });
+        const progress = getPoiZoneSearchProgressSeconds(active);
+        actions.push({
+          id: 'SEARCH_LOCATION',
+          label: progress > 0 ? `Continuer la fouille de ${active.name.toLowerCase()}` : `Fouiller ${active.name.toLowerCase()} méthodiquement`,
+          detail: searchDetail(state, active),
+        });
       }
       const crowbar = carriesCrowbar(state);
-      for (const zone of poiZones(site)) {
+      for (const zone of discoveredPoiZones(site)) {
         if (zone.id === active?.id) continue;
         if (zone.locked) {
           actions.push({ id: 'FORCE_POI_ZONE', targetId: zone.id, label: `Forcer l’accès vers ${zone.name.toLowerCase()}`, detail: `${crowbar ? 'Pied-de-biche · ' : ''}${durationLabel(scalePhysicalDuration(state, crowbar ? 81 : 180, 'action'))}` });
