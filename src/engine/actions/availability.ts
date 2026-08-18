@@ -24,7 +24,7 @@ function localPowerSources(state: GameState): ItemState[] {
 export function getContextActions(state: GameState): ActionOption[] {
   const actions: ActionOption[] = [];
   for (const { connection, location } of connectedDestinations(state)) {
-    if (connection.locked) continue;
+    if (connection.hiddenFromContext || connection.locked) continue;
     if (connection.open) actions.push({ id: 'MOVE', targetId: location.id, label: `Aller vers ${location.name}`, detail: `${connection.travelSeconds} s` });
     else actions.push({ id: 'OPEN_CONNECTION', targetId: connection.id, label: `Ouvrir vers ${location.name}`, detail: `${connection.openSeconds} s` });
   }
