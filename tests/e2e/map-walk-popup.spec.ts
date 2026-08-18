@@ -1,25 +1,36 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  await page.route('https://overpass-api.de/api/interpreter', async (route) => {
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ elements: [] }) });
-  });
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 });
 
-test('Marcher ici closes its map popup immediately after the click', async ({ page }) => {
+async function reachStreet(page: Page): Promise<void> {
+  await page.getByRole('button', { name: /Aller vers Cuisine/ }).click();
+  await page.getByRole('button', { name: /Aller vers Jardin/ }).click();
+  await page.getByRole('button', { name: /Ouvrir vers Rue devant le domicile/ }).click();
+  await page.getByRole('button', { name: /Aller vers Rue devant le domicile/ }).click();
+}
+
+test('Marcher ici closes the Zone Alpha popup and map overlay after a successful outdoor step', async ({ page }) => {
+  await reachStreet(page);
   await page.getByRole('button', { name: /Carte/ }).click();
-  const map = page.getByTestId('leaflet-map');
+  const map = page.getByTestId('zone-alpha-map');
   await expect(map).toBeVisible();
 
   const box = await map.boundingBox();
-  if (!box) throw new Error('Map has no bounding box');
-  await map.click({ position: { x: Math.max(30, Math.floor(box.width * 0.25)), y: Math.max(100, Math.floor(box.height * 0.65)) } });
+  if (!box) throw new Error('Zone Alpha map has no bounding box');
+  const visibleX = Math.max(20, Math.min(box.width - 20, box.width * 0.3));
+  const visibleY = Math.max(80, Math.min(box.height - 20, box.height * 0.2));
+  await map.click({ position: { x: visibleX, y: visibleY } });
 
   const walkButton = page.getByRole('button', { name: 'Marcher ici' });
   await expect(walkButton).toBeVisible();
   await walkButton.click();
-  await expect(page.locator('.walk-popup')).toHaveCount(0);
+
+  await expect(page.locator('[data-zone-popup]')).toHaveCount(0);
+  await expect(page.getByTestId('map-view')).toHaveCount(0);
+  await expect(page.getByTestId('home-view')).toBeVisible();
+  await expect(page.getByText('Vous avancez à pied.', { exact: true })).toBeVisible();
 });
