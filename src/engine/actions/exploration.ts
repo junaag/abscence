@@ -56,7 +56,7 @@ function distance(state: GameState, target: MapTravelTarget): number {
 function mapBlocked(state: GameState): EngineTransition | null {
   const location = state.locations[state.player.locationId];
   const outdoors = location && (location.poiSite ? location.poiSite.phase === 'outside' : location.ventilation >= 0.8);
-  return outdoors ? null : failure(state, 'Impossible depuis ici', 'Vous devez d’abord rejoindre l’extérieur avant de vous déplacer sur la carte.');
+  return outdoors ? null : failure(state, 'Impossible depuis ici', 'Vous devez rejoindre l’extérieur.');
 }
 
 function loadNote(state: GameState): string {
@@ -107,7 +107,7 @@ function triggerRisk(state: GameState, risk: PoiRiskState): string {
   state.player.needs.fatigue += risk.fatiguePenalty;
   state.player.needs.stress += risk.stressPenalty;
   clampNeeds(state);
-  return ` En fouillant sans sécuriser la zone, ${risk.label.toLowerCase()} vous atteint.`;
+  return ` En fouillant sans sécuriser, ${risk.label.toLowerCase()} vous atteint.`;
 }
 
 export function observeLocation(state: GameState): EngineTransition {
@@ -118,7 +118,7 @@ export function observeLocation(state: GameState): EngineTransition {
   const next = cloneState(state), nextSite = next.locations[location.id]?.poiSite;
   if (!nextSite) return failure(state, 'Lieu indisponible', 'Lieu inaccessible.');
   ensurePoiSiteStructure(nextSite); nextSite.observed = true; advanceTime(next, 25);
-  return success(next, 'Vous observez les lieux.', nextSite.entranceLocked ? 'Aucun mouvement. L’accès est verrouillé.' : 'Aucun mouvement. L’accès paraît praticable.', 25);
+  return success(next, 'Vous observez les lieux.', nextSite.entranceLocked ? 'L’accès est verrouillé.' : 'L’accès paraît praticable.', 25);
 }
 
 export function forcePoiAccess(state: GameState): EngineTransition {
@@ -156,7 +156,7 @@ export function movePoiZone(state: GameState, zoneId: string | undefined): Engin
   const location = currentPoi(state), site = location?.poiSite;
   if (!location || !site || site.phase !== 'inside') return failure(state, 'Déplacement impossible', 'Vous devez être à l’intérieur.');
   const target = getPoiZone(site, zoneId);
-  if (!target || !target.discovered) return failure(state, 'Zone inconnue', 'Cette partie du bâtiment n’a pas encore été repérée.');
+  if (!target || !target.discovered) return failure(state, 'Zone inconnue', 'Cet espace reste inconnu.');
   if (target.id === site.activeZoneId) return failure(state, 'Déjà ici', 'Vous êtes déjà ici.');
   if (target.locked) return failure(state, 'Accès verrouillé', 'Cette zone est verrouillée.');
   const seconds = scalePhysicalDuration(state, 18, 'action'), next = cloneState(state), nextLocation = next.locations[location.id], nextSite = nextLocation?.poiSite;
@@ -173,7 +173,7 @@ export function forcePoiZone(state: GameState, zoneId: string | undefined): Engi
   const location = currentPoi(state), site = location?.poiSite;
   if (!location || !site || site.phase !== 'inside') return failure(state, 'Accès impossible', 'Vous devez être à l’intérieur.');
   const target = getPoiZone(site, zoneId);
-  if (!target || !target.discovered) return failure(state, 'Zone inconnue', 'Cette partie du bâtiment n’a pas encore été repérée.');
+  if (!target || !target.discovered) return failure(state, 'Zone inconnue', 'Cet espace reste inconnu.');
   if (!target.locked) return failure(state, 'Accès déjà libre', 'Cette zone est ouverte.');
   const tool = hasCrowbar(state), seconds = forceTime(state, 180), next = cloneState(state), nextLocation = next.locations[location.id], nextSite = nextLocation?.poiSite;
   if (!nextLocation || !nextSite) return failure(state, 'Lieu indisponible', 'Lieu inaccessible.');
@@ -214,7 +214,7 @@ export function searchLocation(state: GameState): EngineTransition {
   const elapsedMinutes = Math.max(1, Math.round(seconds / 60));
   if (!complete) {
     const remainingMinutes = Math.max(1, Math.ceil((totalBaseSeconds - nextProgress) / 60));
-    return success(next, `Vous fouillez ${nextZone.name.toLowerCase()} méthodiquement.`, `Après environ ${elapsedMinutes} minutes, vous n’avez encore examiné qu’une partie de l’espace. Il reste environ ${remainingMinutes} minutes de fouille méthodique.${incident}${loadNote(state)}`, seconds);
+    return success(next, `Vous fouillez ${nextZone.name.toLowerCase()} méthodiquement.`, `Après ${elapsedMinutes} min, la fouille reste partielle : il reste environ ${remainingMinutes} minutes.${incident}${loadNote(state)}`, seconds);
   }
   nextZone.searched = true; nextSite.searched = true;
   const found = reveal(next, nextLocation, nextZone, 'deep');
@@ -223,9 +223,9 @@ export function searchLocation(state: GameState): EngineTransition {
   let access = '';
   if (nextZone.revealsZoneId) {
     const revealedZone = getPoiZone(nextSite, nextZone.revealsZoneId);
-    if (revealedZone && !revealedZone.discovered) { revealedZone.discovered = true; access = ` En terminant, vous découvrez un accès vers ${revealedZone.name.toLowerCase()}.`; }
+    if (revealedZone && !revealedZone.discovered) { revealedZone.discovered = true; access = ` Vous découvrez un accès vers ${revealedZone.name.toLowerCase()}.`; }
   }
-  return success(next, `Vous terminez la fouille de ${nextZone.name.toLowerCase()}.`, `${found.length ? `La fouille exhaustive révèle ${found.join(', ')}.` : 'La fouille exhaustive ne révèle rien d’exploitable.'}${incident}${clue}${access}${loadNote(state)}`, seconds);
+  return success(next, `Vous terminez la fouille de ${nextZone.name.toLowerCase()}.`, `${found.length ? `La fouille exhaustive révèle ${found.join(', ')}.` : 'La fouille exhaustive ne révèle rien.'}${incident}${clue}${access}${loadNote(state)}`, seconds);
 }
 
 export function leavePoi(state: GameState): EngineTransition {
