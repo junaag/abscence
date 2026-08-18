@@ -2,6 +2,7 @@ import {
   addExploredMapArea,
   addExploredMapCorridor,
   DEFAULT_HOME_COORDINATES,
+  updateMapViewport,
   type MapCoordinate,
   type MapUiState,
 } from '../app/map-state';
@@ -46,15 +47,15 @@ function viewMarkup(state: GameState, ui: UiState): string {
     case 'home': return renderHomeView(state, ui);
     case 'inventory': return renderInventoryView(state, ui);
     case 'phone': return renderPhoneView(state, ui);
-    case 'map': return renderMapView(ui);
+    case 'map': return `${renderHomeView(state, { ...ui, view: 'home' })}${renderMapView(ui)}`;
   }
 }
 
 function locationMapCoordinate(state: GameState): MapCoordinate | null {
   const position = currentLocation(state).position;
-  if (!position || !('lat' in position) || !('lon' in position)) return null;
-  if (!Number.isFinite(position.lat) || !Number.isFinite(position.lon)) return null;
-  return { lat: position.lat, lng: position.lon };
+  if (!position || !('x' in position) || !('y' in position)) return null;
+  if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) return null;
+  return { x: position.x, y: position.y };
 }
 
 export function mountApp(root: HTMLElement, initialState: GameState, options: MountOptions): void {
@@ -137,8 +138,9 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     const origin = locationMapCoordinate(previousState) ?? { ...DEFAULT_HOME_COORDINATES };
 
     let nextMapState = addExploredMapArea(mapState, { ...destination, radiusM: 16 });
-    const moved = Math.abs(origin.lat - destination.lat) > 0.000001 || Math.abs(origin.lng - destination.lng) > 0.000001;
+    const moved = Math.abs(origin.x - destination.x) > 0.01 || Math.abs(origin.y - destination.y) > 0.01;
     if (moved) nextMapState = addExploredMapCorridor(nextMapState, { points: [origin, destination], radiusM: 7 });
+    nextMapState = updateMapViewport(nextMapState, destination.x, destination.y, nextMapState.zoom);
     persistMapState(nextMapState);
     mapController?.sync(mapState, destination);
   };
@@ -167,6 +169,10 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
       revealMovementOnMap(previousState);
     }
 
+    if (transition.result.success && (action.id === 'TRAVEL_TO_MAP_POI' || action.id === 'WALK_TO_MAP_POINT')) {
+      ui.view = 'home';
+    }
+
     if (transition.result.success && action.targetId && state.items[action.targetId]?.location.kind === 'consumed') {
       closePopupContext();
     }
@@ -184,6 +190,12 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     const target = event.target as HTMLElement;
     const button = target.closest<HTMLButtonElement>('button');
     if (!button) return;
+
+    if (button.dataset.closeMap !== undefined) {
+      ui.view = 'home';
+      render();
+      return;
+    }
 
     const navId = button.dataset.nav as ViewId | undefined;
     if (navId) {
