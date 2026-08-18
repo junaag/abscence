@@ -58,6 +58,11 @@ function locationMapCoordinate(state: GameState): MapCoordinate | null {
   return { x: position.x, y: position.y };
 }
 
+function currentLocationIsOutdoor(state: GameState): boolean {
+  const location = currentLocation(state);
+  return location.poiSite ? location.poiSite.phase === 'outside' : location.ventilation >= 0.8;
+}
+
 export function mountApp(root: HTMLElement, initialState: GameState, options: MountOptions): void {
   let state = initialState;
   let ui: UiState = {
@@ -165,9 +170,9 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
     ui.result = transition.result;
     markPersistenceFailure(options.persist(state));
 
-    if (transition.result.success && (action.id === 'MOVE' || action.id === 'TRAVEL_TO_MAP_POI' || action.id === 'WALK_TO_MAP_POINT')) {
-      revealMovementOnMap(previousState);
-    }
+    const mapMovement = action.id === 'TRAVEL_TO_MAP_POI' || action.id === 'WALK_TO_MAP_POINT'
+      || (action.id === 'MOVE' && currentLocationIsOutdoor(state));
+    if (transition.result.success && mapMovement) revealMovementOnMap(previousState);
 
     if (transition.result.success && (action.id === 'TRAVEL_TO_MAP_POI' || action.id === 'WALK_TO_MAP_POINT')) {
       ui.view = 'home';
