@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-const NEW_SAVE_KEY = 'absence-v020-prologue-r2';
+const NEW_SAVE_KEY = 'absence-v030-zone-alpha-r1';
 
-test('revised prologue intentionally ignores previous preview progression', async ({ page }) => {
+test('Zone Alpha release intentionally ignores previous preview progression', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => {
     localStorage.clear();
-    localStorage.setItem('absence-v020-dev', JSON.stringify({
+    localStorage.setItem('absence-v020-prologue-r2', JSON.stringify({
       gameVersion: '0.2.0-dev',
       player: { locationId: 'kitchen', healthPv: 73 },
     }));
@@ -26,7 +26,7 @@ test('revised prologue intentionally ignores previous preview progression', asyn
   expect(current).toBeNull();
 });
 
-test('once the revised prologue creates its own save, that progression reloads normally', async ({ page }) => {
+test('once v0.3 creates its own save, that progression reloads normally', async ({ page }) => {
   await page.goto('/');
   await page.evaluate(() => localStorage.clear());
   await page.reload();
