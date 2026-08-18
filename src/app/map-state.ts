@@ -1,9 +1,11 @@
-export const MAP_STATE_KEY = 'absence-v020-map-state-prologue-r2';
-export const DEFAULT_HOME_COORDINATES = Object.freeze({ lat: 43.4053, lng: 5.0548 });
+import { ZONE_ALPHA_BOUNDS, ZONE_ALPHA_HOME_POSITION } from '../content/zone-alpha';
+
+export const MAP_STATE_KEY = 'absence-v030-map-state-zone-alpha-r1';
+export const DEFAULT_HOME_COORDINATES = Object.freeze({ ...ZONE_ALPHA_HOME_POSITION });
 
 export interface MapCoordinate {
-  lat: number;
-  lng: number;
+  x: number;
+  y: number;
 }
 
 export interface ExploredMapArea extends MapCoordinate {
@@ -37,10 +39,13 @@ function clamp(value: number, min: number, max: number): number {
 function normalizeCoordinate(value: unknown): MapCoordinate | null {
   if (!value || typeof value !== 'object') return null;
   const candidate = value as Partial<MapCoordinate>;
-  const lat = finite(candidate.lat, Number.NaN);
-  const lng = finite(candidate.lng, Number.NaN);
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
-  return { lat: clamp(lat, -85, 85), lng: clamp(lng, -180, 180) };
+  const x = finite(candidate.x, Number.NaN);
+  const y = finite(candidate.y, Number.NaN);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return {
+    x: clamp(x, -100, ZONE_ALPHA_BOUNDS.widthM + 100),
+    y: clamp(y, -100, ZONE_ALPHA_BOUNDS.heightM + 100),
+  };
 }
 
 function normalizeArea(value: unknown): ExploredMapArea | null {
@@ -48,7 +53,7 @@ function normalizeArea(value: unknown): ExploredMapArea | null {
   if (!coordinate || !value || typeof value !== 'object') return null;
   const radiusM = finite((value as Partial<ExploredMapArea>).radiusM, Number.NaN);
   if (!Number.isFinite(radiusM) || radiusM <= 0) return null;
-  return { ...coordinate, radiusM: clamp(radiusM, 2, 5000) };
+  return { ...coordinate, radiusM: clamp(radiusM, 2, 500) };
 }
 
 function normalizeCorridor(value: unknown): ExploredMapCorridor | null {
@@ -59,7 +64,7 @@ function normalizeCorridor(value: unknown): ExploredMapCorridor | null {
   const points = candidate.points
     .map(normalizeCoordinate)
     .filter((point): point is MapCoordinate => point !== null)
-    .filter((point, index, all) => index === 0 || Math.abs(point.lat - all[index - 1]!.lat) >= 0.000001 || Math.abs(point.lng - all[index - 1]!.lng) >= 0.000001)
+    .filter((point, index, all) => index === 0 || Math.abs(point.x - all[index - 1]!.x) >= 0.01 || Math.abs(point.y - all[index - 1]!.y) >= 0.01)
     .slice(0, 64);
   if (points.length < 2) return null;
   return { points, radiusM: clamp(radiusM, 2, 100) };
@@ -68,7 +73,7 @@ function normalizeCorridor(value: unknown): ExploredMapCorridor | null {
 export function createDefaultMapUiState(): MapUiState {
   return {
     center: { ...DEFAULT_HOME_COORDINATES },
-    zoom: 18,
+    zoom: 1.35,
     explored: [{ ...DEFAULT_HOME_COORDINATES, radiusM: 18 }],
     exploredCorridors: [],
   };
@@ -79,8 +84,10 @@ export function normalizeMapUiState(value: unknown): MapUiState {
   if (!value || typeof value !== 'object') return fallback;
   const candidate = value as Partial<MapUiState>;
   const centerCandidate = normalizeCoordinate(candidate.center) ?? fallback.center;
-  const zoom = clamp(Math.round(finite(candidate.zoom, fallback.zoom)), 3, 20);
-  const explored = Array.isArray(candidate.explored) ? candidate.explored.map(normalizeArea).filter((area): area is ExploredMapArea => area !== null).slice(-500) : fallback.explored;
+  const zoom = clamp(finite(candidate.zoom, fallback.zoom), 0.8, 2.8);
+  const explored = Array.isArray(candidate.explored)
+    ? candidate.explored.map(normalizeArea).filter((area): area is ExploredMapArea => area !== null).slice(-500)
+    : fallback.explored;
   const exploredCorridors = Array.isArray(candidate.exploredCorridors)
     ? candidate.exploredCorridors.map(normalizeCorridor).filter((corridor): corridor is ExploredMapCorridor => corridor !== null).slice(-250)
     : [];
@@ -93,31 +100,16 @@ export function normalizeMapUiState(value: unknown): MapUiState {
 }
 
 function distanceMeters(a: MapCoordinate, b: MapCoordinate): number {
-  const radians = Math.PI / 180;
-  const lat1 = a.lat * radians;
-  const lat2 = b.lat * radians;
-  const dLat = (b.lat - a.lat) * radians;
-  const dLng = (b.lng - a.lng) * radians;
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
-  return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
-}
-
-function localMeters(origin: MapCoordinate, point: MapCoordinate): { x: number; y: number } {
-  const radians = Math.PI / 180;
-  const meanLat = ((origin.lat + point.lat) / 2) * radians;
-  return {
-    x: (point.lng - origin.lng) * radians * 6371000 * Math.cos(meanLat),
-    y: (point.lat - origin.lat) * radians * 6371000,
-  };
+  return Math.hypot(b.x - a.x, b.y - a.y);
 }
 
 function distanceToSegmentMeters(point: MapCoordinate, a: MapCoordinate, b: MapCoordinate): number {
-  const p = localMeters(a, point);
-  const end = localMeters(a, b);
-  const lengthSquared = end.x ** 2 + end.y ** 2;
-  if (lengthSquared <= 0.000001) return Math.hypot(p.x, p.y);
-  const t = clamp((p.x * end.x + p.y * end.y) / lengthSquared, 0, 1);
-  return Math.hypot(p.x - end.x * t, p.y - end.y * t);
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared <= 0.000001) return distanceMeters(point, a);
+  const t = clamp(((point.x - a.x) * dx + (point.y - a.y) * dy) / lengthSquared, 0, 1);
+  return Math.hypot(point.x - (a.x + dx * t), point.y - (a.y + dy * t));
 }
 
 export function isMapPointExplored(state: MapUiState, point: MapCoordinate): boolean {
@@ -144,10 +136,10 @@ export function saveMapUiState(state: MapUiState, storage: MapStateWriteStorage)
   storage.setItem(MAP_STATE_KEY, JSON.stringify(normalizeMapUiState(state)));
 }
 
-export function updateMapViewport(state: MapUiState, lat: number, lng: number, zoom: number): MapUiState {
+export function updateMapViewport(state: MapUiState, x: number, y: number, zoom: number): MapUiState {
   const next = normalizeMapUiState(state);
-  next.center = { lat: clamp(finite(lat, next.center.lat), -85, 85), lng: clamp(finite(lng, next.center.lng), -180, 180) };
-  next.zoom = clamp(Math.round(finite(zoom, next.zoom)), 3, 20);
+  next.center = normalizeCoordinate({ x, y }) ?? next.center;
+  next.zoom = clamp(finite(zoom, next.zoom), 0.8, 2.8);
   return next;
 }
 
@@ -155,7 +147,7 @@ export function addExploredMapArea(state: MapUiState, area: ExploredMapArea): Ma
   const next = normalizeMapUiState(state);
   const normalized = normalizeArea(area);
   if (!normalized) return next;
-  const duplicate = next.explored.some((entry) => Math.abs(entry.lat - normalized.lat) < 0.000001 && Math.abs(entry.lng - normalized.lng) < 0.000001 && Math.abs(entry.radiusM - normalized.radiusM) < 0.1);
+  const duplicate = next.explored.some((entry) => Math.abs(entry.x - normalized.x) < 0.01 && Math.abs(entry.y - normalized.y) < 0.01 && Math.abs(entry.radiusM - normalized.radiusM) < 0.1);
   if (!duplicate) next.explored = [...next.explored, normalized].slice(-500);
   return next;
 }
