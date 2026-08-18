@@ -112,7 +112,7 @@ export function mountApp(root: HTMLElement, initialState: GameState, options: Mo
         const slot = root.querySelector<HTMLElement>('[data-map-slot]');
         if (slot) controller.attach(slot);
       })
-      .catch((error: unknown) => console.error(error));
+      .catch(console.error);
   };
 
   function render(): void {
